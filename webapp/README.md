@@ -6,7 +6,7 @@ React + Vite web console for the Sidecar ML iPhone server.
 npm install
 npm run dev        # http://localhost:5173
 npm test           # Vitest + Testing Library + MSW
-npm run build      # production build in dist/ + single-file sidecar-ml-console.html
+npm run build      # production build in dist/ + single-file dist/sidecar-ml-console.html
 ```
 
 Enter the phone's address from the Sidecar ML app (e.g. `http://192.168.1.20:8080`)
@@ -15,27 +15,28 @@ reason the phone reports.
 
 ## Single-file console
 
-`npm run build` also emits `sidecar-ml-console.html` at the repo root: the
-whole console — CSS, JavaScript, favicon, and the microphone worklet — inlined
-into one HTML file. Anyone who has the Sidecar ML app on their phone can
-download that one file, open it in a browser (double-click works; `file://` is
-a secure context, so the microphone is available), enter the phone's address,
-and connect. The phone's CORS policy is `*`, which accepts the `null` origin a
-local file sends.
+The whole console — CSS, JavaScript, favicon, and the microphone worklet —
+also ships as one self-contained HTML file. Download it, open it in a browser
+(double-click works; `file://` is a secure context, so the microphone is
+available), enter the phone's address, and connect. The phone's CORS policy is
+`*`, which accepts the `null` origin a local file sends.
 
-The file is committed so the iOS app can link people straight to it on GitHub.
-After changing the console, re-run `npm run build` and commit the regenerated
-file with your change.
-
-For a one-click download there is also a GitHub release asset with a stable
-URL — this is what the iOS app should link:
+**Download it** from the latest release (stable URL, also what the iOS app
+links):
 
     https://github.com/AndersFB/Sidecar-ML-Console/releases/latest/download/sidecar-ml-console.html
 
-After building, committing and pushing a console change, run `npm run release`
-to update it (replaces the asset on the release for the current package.json
-version, or creates the release if the version is new; needs an authenticated
-GitHub CLI).
+**Or build it yourself:**
+
+```bash
+npm install
+npm run build      # → dist/sidecar-ml-console.html
+```
+
+Maintainers: after a console change lands on `main`, run `npm run release` to
+update the download (replaces the asset on the release for the current
+package.json version, or creates the release if the version is new; needs an
+authenticated GitHub CLI).
 
 Notes:
 

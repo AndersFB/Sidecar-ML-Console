@@ -8,8 +8,9 @@ speech-to-text, text-to-speech, offline translation, NLP, sound classification,
 Shazam — and the Apple Intelligence LLM behind an **OpenAI-compatible**
 `/v1/chat/completions` endpoint.
 
-> The iOS app itself lives in a separate repository:
-> [`AndersFB/Sidecar-ML`](https://github.com/AndersFB/Sidecar-ML).
+<!-- TODO: replace id000000000 with the real App Store id once the app is live -->
+> **Get the app:** [Download Sidecar ML on the App Store](https://apps.apple.com/app/id000000000)
+> *(listing coming soon)*
 
 ```
 ┌─ iPhone: "Sidecar ML" app ────────────────────────────┐
@@ -29,9 +30,9 @@ Shazam — and the Apple Intelligence LLM behind an **OpenAI-compatible**
 
 ## Quickstart
 
-**1. Run the app** — build [`Sidecar-ML`](https://github.com/AndersFB/Sidecar-ML)
-onto your iPhone with Xcode and tap **Start Server**. The dashboard shows the
-URL (e.g. `http://192.168.1.20:8080`) plus a QR code. Keep the app in the
+**1. Run the app** — [install Sidecar ML from the App Store](https://apps.apple.com/app/id000000000),
+open it and tap **Start Server**. The dashboard shows the URL
+(e.g. `http://192.168.1.20:8080`) plus a QR code. Keep the app in the
 foreground — iOS suspends network servers in the background (there's a
 keep-awake toggle).
 
@@ -44,7 +45,10 @@ curl http://192.168.1.20:8080/v1/vision/ocr \
      -H 'Content-Type: image/jpeg' --data-binary @receipt.jpg
 ```
 
-**3. Web console:**
+**3. Web console** — download the ready-made single-file console
+([`sidecar-ml-console.html`](https://github.com/AndersFB/Sidecar-ML-Console/releases/latest/download/sidecar-ml-console.html)
+from the latest release), open it in your browser and enter the phone's
+address — or run the dev server:
 
 ```bash
 cd webapp && npm install && npm run dev
@@ -69,4 +73,4 @@ phone = OpenAI(base_url="http://192.168.1.20:8080/v1", api_key="unused")
   all examples accept a token. Everything runs on-device; only Shazam catalog
   matching calls out to Apple.
 - **Tests**: the webapp has a Vitest suite (`cd webapp && npm test`). The
-  server's own test suites live in the app repository.
+  server's own test suites live with the iOS app.

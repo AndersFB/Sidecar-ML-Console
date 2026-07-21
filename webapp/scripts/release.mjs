@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const tag = `v${pkg.version}`;
-const artifact = fileURLToPath(new URL('../../sidecar-ml-console.html', import.meta.url));
+const artifact = fileURLToPath(new URL('../dist/sidecar-ml-console.html', import.meta.url));
 
 const NOTES = `Single-file Sidecar ML web console.
 
