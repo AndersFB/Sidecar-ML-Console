@@ -34,7 +34,7 @@ export default function App() {
         <header className="flex items-center gap-2 px-1 pt-1">
           <SidecarLogo size={30} />
           <div>
-            <h1 className="text-sm font-bold leading-tight">Sidecar ML</h1>
+            <h1 className="text-sm font-bold leading-tight">ML Sidecar</h1>
             <p className="text-[10px] text-ink-3">iPhone inference console</p>
           </div>
         </header>
@@ -92,7 +92,7 @@ export default function App() {
         </nav>
 
         <p className="px-2 text-[10px] leading-relaxed text-ink-3 max-md:hidden">
-          All inference runs on the iPhone. Keep the Sidecar ML app in the foreground.
+          All inference runs on the iPhone. Keep the ML Sidecar app in the foreground.
         </p>
       </aside>
 
@@ -115,7 +115,7 @@ export default function App() {
             />
           )}
           {status !== 'online' && (
-            <ErrorBanner message="Not connected — enter your iPhone's address (shown in the Sidecar ML app) and press Connect." />
+            <ErrorBanner message="Not connected — enter your iPhone's address (shown in the ML Sidecar app) and press Connect." />
           )}
 
           <SelectedComponent key={selected.id} />

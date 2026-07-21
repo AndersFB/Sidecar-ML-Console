@@ -1,17 +1,26 @@
-# Sidecar ML Console
+# ML Sidecar Console
 
-React + Vite web console for the Sidecar ML iPhone server.
+React + Vite web console for the ML Sidecar iPhone server.
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
 npm test           # Vitest + Testing Library + MSW
-npm run build      # production build in dist/
+npm run build      # production build in dist/ + single-file dist/ml-sidecar-console.html
 ```
 
-Enter the phone's address from the Sidecar ML app (e.g. `http://192.168.1.20:8080`)
+Enter the phone's address from the ML Sidecar app (e.g. `http://192.168.1.20:8080`)
 and connect. Each capability gets a panel; unavailable ones are marked with the
 reason the phone reports.
+
+## Single-file console
+
+`npm run build` also emits `dist/ml-sidecar-console.html`: the whole console —
+CSS, JavaScript, favicon, and the microphone worklet — inlined into one HTML
+file. Anyone who has the ML Sidecar app on their phone can download that one
+file, open it in a browser (double-click works; `file://` is a secure context,
+so the microphone is available), enter the phone's address, and connect. The
+phone's CORS policy is `*`, which accepts the `null` origin a local file sends.
 
 Notes:
 

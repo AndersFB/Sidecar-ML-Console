@@ -22,7 +22,7 @@ describe('App shell + connection', () => {
   it('connects on load and shows capability status', async () => {
     renderApp();
     await waitFor(() => expect(screen.getByText(/Online/)).toBeInTheDocument());
-    expect(screen.getByText(/Sidecar ML 1.0/)).toBeInTheDocument();
+    expect(screen.getByText(/ML Sidecar 1.0/)).toBeInTheDocument();
     // Nav lists panels
     expect(screen.getByRole('button', { name: /OCR/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Song ID/ })).toBeInTheDocument();

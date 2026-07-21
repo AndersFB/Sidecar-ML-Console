@@ -1,4 +1,16 @@
 import { encodeWav } from './wavEncoder';
+import workletSource from './recorder-worklet.js?raw';
+
+// The worklet is bundled as source text and loaded through a Blob URL instead
+// of being fetched from the server, so recording also works when the console
+// runs as a single downloaded HTML file with nothing served next to it.
+let workletModuleUrl: string | undefined;
+function workletUrl(): string {
+  workletModuleUrl ??= URL.createObjectURL(
+    new Blob([workletSource], { type: 'application/javascript' }),
+  );
+  return workletModuleUrl;
+}
 
 /**
  * Microphone capture → WAV blob, via AudioWorklet (with a ScriptProcessor
@@ -22,7 +34,7 @@ export class MicRecorder {
     const source = this.context.createMediaStreamSource(this.stream);
 
     try {
-      await this.context.audioWorklet.addModule('/recorder-worklet.js');
+      await this.context.audioWorklet.addModule(workletUrl());
       const worklet = new AudioWorkletNode(this.context, 'recorder-processor');
       worklet.port.onmessage = (event: MessageEvent<Float32Array>) => {
         this.chunks.push(event.data);

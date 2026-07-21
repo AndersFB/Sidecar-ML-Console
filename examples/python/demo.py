@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quick CLI against a Sidecar ML iPhone.
+"""Quick CLI against a ML Sidecar iPhone.
 
     python demo.py --base-url http://192.168.1.20:8080 health
     python demo.py capabilities

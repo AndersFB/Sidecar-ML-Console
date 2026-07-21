@@ -5,7 +5,7 @@ export const BASE = 'http://phone.test:8080';
 
 export const healthFixture: Health = {
   status: 'ok',
-  app: 'Sidecar ML',
+  app: 'ML Sidecar',
   version: '1.0',
   uptime_s: 12.5,
 };

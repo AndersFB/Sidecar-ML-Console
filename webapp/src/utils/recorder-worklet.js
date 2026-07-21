@@ -1,5 +1,5 @@
 // AudioWorklet that forwards raw Float32 PCM frames to the main thread.
-// The main thread accumulates them and encodes a 16-bit WAV (the Sidecar ML
+// The main thread accumulates them and encodes a 16-bit WAV (the ML Sidecar
 // server can't decode browser-native webm/opus recordings).
 class RecorderProcessor extends AudioWorkletProcessor {
   process(inputs) {

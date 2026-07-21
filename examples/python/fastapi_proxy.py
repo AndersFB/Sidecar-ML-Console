@@ -8,7 +8,7 @@ Then:
     curl -X POST http://127.0.0.1:8000/ask -H 'Content-Type: application/json' \
          -d '{"question": "What is OCR?"}'
 
-Set SIDECAR_URL to your phone's address (see the Sidecar ML app's dashboard).
+Set SIDECAR_URL to your phone's address (see the ML Sidecar app's dashboard).
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from pydantic import BaseModel
 SIDECAR_URL = os.environ.get("SIDECAR_URL", "http://127.0.0.1:8080")
 SIDECAR_TOKEN = os.environ.get("SIDECAR_TOKEN")
 
-app = FastAPI(title="Sidecar ML proxy example")
+app = FastAPI(title="ML Sidecar proxy example")
 
 
 def phone_client() -> httpx.AsyncClient:

@@ -1,4 +1,4 @@
-// DTOs mirroring the Sidecar ML server (snake_case as sent over the wire).
+// DTOs mirroring the ML Sidecar server (snake_case as sent over the wire).
 
 export interface Capability {
   id: string;

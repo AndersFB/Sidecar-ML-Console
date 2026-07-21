@@ -1,4 +1,4 @@
-# Sidecar ML — HTTP API reference
+# ML Sidecar — HTTP API reference
 
 Base URL: `http://<phone-ip>:<port>` (shown in the app; default port 8080).
 Everything is JSON with `snake_case` keys. If auth is enabled in the app,
@@ -25,7 +25,7 @@ Supported audio containers: WAV, M4A/AAC, MP3, AIFF, CAF, FLAC
 
 ### `GET /health` *(no auth)*
 ```json
-{ "status": "ok", "app": "Sidecar ML", "version": "1.0", "uptime_s": 12.5 }
+{ "status": "ok", "app": "ML Sidecar", "version": "1.0", "uptime_s": 12.5 }
 ```
 
 ### `GET /v1/capabilities`

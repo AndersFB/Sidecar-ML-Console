@@ -74,7 +74,7 @@ export function TranslatePanel() {
         {busy && <Spinner />}
       </div>
       <p className="text-xs text-ink-3">
-        Language pairs must be downloaded on the iPhone first (Sidecar ML app → Settings →
+        Language pairs must be downloaded on the iPhone first (ML Sidecar app → Settings →
         Translation).
       </p>
       {error && <ErrorBanner message={error} />}

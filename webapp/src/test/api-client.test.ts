@@ -15,7 +15,7 @@ describe('joinUrl', () => {
 describe('api client', () => {
   it('fetches health', async () => {
     const health = await api.health({ baseUrl: BASE });
-    expect(health.app).toBe('Sidecar ML');
+    expect(health.app).toBe('ML Sidecar');
     expect(health.uptime_s).toBeCloseTo(12.5);
   });
 
