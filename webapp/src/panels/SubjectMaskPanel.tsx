@@ -44,7 +44,7 @@ export function SubjectMaskPanel() {
       {error && <ErrorBanner message={error} />}
 
       {resultUrl && image && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Card title="Original">
             <img src={image.previewUrl} alt="Original" className="w-full rounded-lg" />
           </Card>

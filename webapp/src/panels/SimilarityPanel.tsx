@@ -32,7 +32,7 @@ export function SimilarityPanel() {
         Compares Vision feature-print embeddings — the same tech behind reverse image search
         and photo de-duplication. Lower distance = more similar.
       </p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <ImageDropzone label="Image A" onPick={(picked) => { setImageA(picked); setResult(null); }} />
         <ImageDropzone label="Image B" onPick={(picked) => { setImageB(picked); setResult(null); }} />
       </div>

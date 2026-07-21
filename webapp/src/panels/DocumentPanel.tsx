@@ -42,7 +42,7 @@ export function DocumentPanel() {
         <Card><p className="text-sm text-ink-2">No document found in this image.</p></Card>
       )}
       {result?.detected && result.corrected && image && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Card title="Original">
             <img src={image.previewUrl} alt="Original" className="w-full rounded-lg" />
           </Card>

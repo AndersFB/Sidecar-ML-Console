@@ -74,7 +74,7 @@ export function ImageGenPanel() {
       {error && <ErrorBanner message={error} />}
 
       {images.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {images.map((url, index) => (
             <Card key={index}>
               <img src={url} alt={`Generated ${index + 1}`} className="w-full rounded-lg" />

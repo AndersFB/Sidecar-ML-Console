@@ -85,7 +85,7 @@ export function NlpPanel() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Card title="Language">
               <p className="text-2xl font-bold text-cyan-a">{result.language ?? '?'}</p>
               <ul className="mt-1 text-xs text-ink-3">

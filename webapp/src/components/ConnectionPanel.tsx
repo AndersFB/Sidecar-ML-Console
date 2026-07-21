@@ -40,13 +40,13 @@ export function ConnectionPanel() {
 
       <div className="flex gap-2">
         <input
-          className={`${inputClass} flex-1 font-mono text-xs`}
+          className={`${inputClass} min-w-0 flex-1 font-mono text-xs`}
           value={baseUrl}
           onChange={(event) => setBaseUrl(event.target.value)}
           placeholder="http://192.168.1.20:8080"
           aria-label="Server address"
         />
-        <button type="submit" className="btn-gradient px-3 py-1.5 text-xs">
+        <button type="submit" className="btn-gradient shrink-0 px-3 py-1.5 text-xs">
           Connect
         </button>
       </div>

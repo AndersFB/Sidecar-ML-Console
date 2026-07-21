@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ConnectionPanel } from './components/ConnectionPanel';
+import { Icon } from './components/Icon';
+import { SidecarLogo } from './components/SidecarLogo';
 import { ErrorBanner } from './components/Primitives';
 import { PANELS } from './panels/registry';
 import { useConnection } from './state/ConnectionContext';
@@ -26,11 +28,11 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar */}
-      <aside className="flex w-64 shrink-0 flex-col gap-3 border-r border-line p-3">
+    <div className="flex h-full max-md:flex-col">
+      {/* Sidebar (top bar on small screens) */}
+      <aside className="flex flex-col gap-3 border-line p-3 max-md:border-b md:w-64 md:shrink-0 md:border-r">
         <header className="flex items-center gap-2 px-1 pt-1">
-          <span className="inline-block size-7 rounded-lg btn-gradient text-center text-sm leading-7">📱</span>
+          <SidecarLogo size={30} />
           <div>
             <h1 className="text-sm font-bold leading-tight">Sidecar ML</h1>
             <p className="text-[10px] text-ink-3">iPhone inference console</p>
@@ -39,29 +41,36 @@ export default function App() {
 
         <ConnectionPanel />
 
-        <nav className="flex-1 overflow-y-auto" aria-label="Capabilities">
+        <nav
+          className="max-md:-mx-3 max-md:flex max-md:gap-4 max-md:overflow-x-auto max-md:px-3 md:flex-1 md:overflow-y-auto"
+          aria-label="Capabilities"
+        >
           {groups.map((group) => (
-            <div key={group} className="mb-3">
-              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-3">
+            <div key={group} className="max-md:shrink-0 md:mb-3">
+              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-3 max-md:hidden">
                 {group}
               </p>
-              <ul>
+              <ul className="max-md:flex max-md:gap-1">
                 {PANELS.filter((panel) => panel.group === group).map((panel) => {
                   const capability = capabilityById.get(panel.capabilityId);
                   const available = capability?.available ?? false;
                   const isSelected = panel.id === selected.id;
                   return (
-                    <li key={panel.id}>
+                    <li key={panel.id} className="max-md:shrink-0">
                       <button
                         type="button"
                         onClick={() => setSelectedId(panel.id)}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
+                        className={`flex w-full items-center gap-2.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
                           isSelected
                             ? 'bg-panel-2 text-ink'
                             : 'text-ink-2 hover:bg-panel hover:text-ink'
                         }`}
                       >
-                        <span className="text-base">{panel.icon}</span>
+                        <Icon
+                          name={panel.icon}
+                          size={17}
+                          className={isSelected ? 'text-cyan-a' : 'text-ink-3'}
+                        />
                         <span className="flex-1">{panel.title}</span>
                         <span
                           title={capability ? (available ? 'Ready' : capability.reason) : 'Unknown'}
@@ -82,18 +91,19 @@ export default function App() {
           ))}
         </nav>
 
-        <p className="px-2 text-[10px] leading-relaxed text-ink-3">
+        <p className="px-2 text-[10px] leading-relaxed text-ink-3 max-md:hidden">
           All inference runs on the iPhone. Keep the Sidecar ML app in the foreground.
         </p>
       </aside>
 
       {/* Main panel */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-3xl flex-col gap-4 p-5">
-          <header className="flex items-baseline gap-3">
-            <h2 className="text-xl font-bold">
-              {selected.icon} {selected.title}
-            </h2>
+          <header className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-line bg-panel text-cyan-a">
+              <Icon name={selected.icon} size={20} />
+            </span>
+            <h2 className="text-xl font-bold">{selected.title}</h2>
             {selectedCapability && (
               <span className="text-xs text-ink-3">{selectedCapability.summary}</span>
             )}

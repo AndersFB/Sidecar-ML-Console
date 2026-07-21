@@ -19,14 +19,14 @@ classification, Shazam — and the Apple Intelligence LLM behind an
 
 | Path | What |
 |---|---|
-| [`My iPhone Toolkit/`](My%20iPhone%20Toolkit/) | Xcode project (own git repo). App shell + `ToolkitCore` Swift package with the server and all services |
+| [`Sidecar ML/`](Sidecar%20ML/) | Xcode project (own git repo). App shell + `ToolkitCore` Swift package with the server and all services |
 | [`webapp/`](webapp/) | React + Vite web console with a panel for every capability |
 | [`examples/python/`](examples/python/) | `httpx` client, CLI, FastAPI integration, Bonjour discovery |
 | [`docs/API.md`](docs/API.md) | Full HTTP API reference |
 
 ## Quickstart
 
-**1. Run the app** — open `My iPhone Toolkit/My iPhone Toolkit.xcodeproj` in
+**1. Run the app** — open `Sidecar ML/Sidecar ML.xcodeproj` in
 Xcode, run on your iPhone, tap **Start Server**. The dashboard shows the URL
 (e.g. `http://192.168.1.20:8080`) plus a QR code. Keep the app in the
 foreground — iOS suspends network servers in the background (there's a
@@ -65,14 +65,14 @@ phone = OpenAI(base_url="http://192.168.1.20:8080/v1", api_key="unused")
   token in Settings if you don't trust the network. Everything runs on-device;
   only Shazam catalog matching calls out to Apple.
 - **Tests**: `ToolkitCore` has an 84-test Swift Testing suite
-  (`cd "My iPhone Toolkit/ToolkitCore" && swift test`, or run the `ToolkitCore`
-  scheme on a simulator); app-level tests live in `My iPhone ToolkitTests`;
+  (`cd "Sidecar ML/ToolkitCore" && swift test`, or run the `ToolkitCore`
+  scheme on a simulator); app-level tests live in `Sidecar MLTests`;
   the webapp has a Vitest suite (`cd webapp && npm test`).
 
 ## Development
 
-- iOS server code: `My iPhone Toolkit/ToolkitCore/Sources/ToolkitCore/`
+- iOS server code: `Sidecar ML/ToolkitCore/Sources/ToolkitCore/`
   (services are small `CapabilityService` implementations — adding an endpoint
   is one file + one registry line).
-- Regenerate the app icon: `swift "My iPhone Toolkit/tools/make_icon.swift"`.
+- Regenerate the app icon: `swift "Sidecar ML/tools/make_icon.swift"`.
 - Webapp production build: `cd webapp && npm run build`.

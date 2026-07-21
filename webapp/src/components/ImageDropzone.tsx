@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, type DragEvent } from 'react';
+import { Icon } from './Icon';
 
 export interface PickedImage {
   file: File;
@@ -53,7 +54,7 @@ export function ImageDropzone({
         <img src={preview} alt="Selected input" className="max-h-40 rounded-lg object-contain" />
       ) : (
         <>
-          <span className="text-2xl">🖼️</span>
+          <Icon name="image" size={28} className="text-ink-3" />
           <span>{label}</span>
         </>
       )}
