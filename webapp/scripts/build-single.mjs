@@ -1,14 +1,15 @@
 // Post-build step: folds the Vite output (index.html + hashed CSS/JS assets +
-// favicon) into dist/ml-sidecar-console.html — one self-contained page that an
-// ML Sidecar user can download and open straight from disk (file://).
-//
-// Runs after `vite build` (see the "build" script in package.json).
+// favicon) into ml-sidecar-console.html at the repo root — one self-contained
+// page that an ML Sidecar user can download and open straight from disk
+// (file://). The file is committed so the iOS app can link to it on GitHub;
+// re-run `npm run build` and commit whenever the console changes.
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
 const OUT_NAME = 'ml-sidecar-console.html';
+const OUT_PATH = fileURLToPath(new URL(`../../${OUT_NAME}`, import.meta.url));
 
 const MIME = {
   '.svg': 'image/svg+xml',
@@ -67,7 +68,7 @@ if (leftoverRefs.length > 0) {
   throw new Error(`${OUT_NAME} would still fetch local files: ${leftoverRefs.join(', ')}`);
 }
 
-await writeFile(path.join(DIST, OUT_NAME), html);
+await writeFile(OUT_PATH, html);
 
 // Files that exist in dist but are not part of the single page (e.g. a future
 // public/ asset) deserve a loud note — panels relying on them would break.
@@ -79,10 +80,10 @@ async function* walk(dir) {
   }
 }
 for await (const file of walk(DIST)) {
-  if (!inlined.has(file) && file !== OUT_NAME) {
+  if (!inlined.has(file)) {
     console.warn(`build-single: warning — dist/${file} is NOT inside ${OUT_NAME}`);
   }
 }
 
 const kb = (n) => `${(n / 1024).toFixed(0)} KB`;
-console.log(`build-single: wrote dist/${OUT_NAME} (${kb(Buffer.byteLength(html))})`);
+console.log(`build-single: wrote ${OUT_NAME} at the repo root (${kb(Buffer.byteLength(html))})`);
