@@ -1,6 +1,6 @@
 // Post-build step: folds the Vite output (index.html + hashed CSS/JS assets +
-// favicon) into ml-sidecar-console.html at the repo root — one self-contained
-// page that an ML Sidecar user can download and open straight from disk
+// favicon) into sidecar-ml-console.html at the repo root — one self-contained
+// page that a Sidecar ML user can download and open straight from disk
 // (file://). The file is committed so the iOS app can link to it on GitHub;
 // re-run `npm run build` and commit whenever the console changes.
 import { readFile, readdir, writeFile } from 'node:fs/promises';
@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
-const OUT_NAME = 'ml-sidecar-console.html';
+const OUT_NAME = 'sidecar-ml-console.html';
 const OUT_PATH = fileURLToPath(new URL(`../../${OUT_NAME}`, import.meta.url));
 
 const MIME = {

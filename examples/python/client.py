@@ -1,4 +1,4 @@
-"""Python client for the ML Sidecar iPhone server.
+"""Python client for the Sidecar ML iPhone server.
 
 Plain HTTP + JSON — usable from any script, notebook or FastAPI app:
 

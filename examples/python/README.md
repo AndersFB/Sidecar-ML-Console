@@ -1,6 +1,6 @@
 # Python examples
 
-Talk to the ML Sidecar iPhone server from Python.
+Talk to the Sidecar ML iPhone server from Python.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate

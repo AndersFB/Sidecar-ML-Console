@@ -1,5 +1,5 @@
 {
-  "name": "ml-sidecar-console",
+  "name": "sidecar-ml-console",
   "private": true,
   "version": "1.0.0",
   "type": "module",

@@ -63,7 +63,7 @@ export function ConnectionPanel() {
 
       {status === 'offline' && error && (
         <p className="text-xs text-coral">
-          {error} — is the ML Sidecar app open with the server running?
+          {error} — is the Sidecar ML app open with the server running?
         </p>
       )}
     </form>

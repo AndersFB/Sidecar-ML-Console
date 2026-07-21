@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Find ML Sidecar iPhones on the local network via Bonjour/mDNS.
+"""Find Sidecar ML iPhones on the local network via Bonjour/mDNS.
 
     pip install zeroconf
     python discover.py

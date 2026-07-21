@@ -1,5 +1,5 @@
 /**
- * Float32 PCM → 16-bit mono WAV. Mirrors the server's WAVCodec: the ML Sidecar
+ * Float32 PCM → 16-bit mono WAV. Mirrors the server's WAVCodec: the Sidecar ML
  * server (AVAudioFile) can't read browser MediaRecorder output (webm/opus),
  * so microphone capture is encoded client-side.
  */

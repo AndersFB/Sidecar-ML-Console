@@ -1,6 +1,6 @@
-# ML Sidecar — your iPhone as a local ML server
+# Sidecar ML — your iPhone as a local ML server
 
-Web console, Python examples and API docs for **ML Sidecar**, an iOS app that
+Web console, Python examples and API docs for **Sidecar ML**, an iOS app that
 turns an iPhone into a private, zero-cost machine-learning server for your home
 network. The app exposes Apple's on-device models over plain HTTP: OCR,
 background removal, face/pose detection, document scanning, image embeddings,
@@ -9,10 +9,10 @@ Shazam — and the Apple Intelligence LLM behind an **OpenAI-compatible**
 `/v1/chat/completions` endpoint.
 
 > The iOS app itself lives in a separate repository:
-> [`AndersFB/ML-Sidecar`](https://github.com/AndersFB/ML-Sidecar).
+> [`AndersFB/Sidecar-ML`](https://github.com/AndersFB/Sidecar-ML).
 
 ```
-┌─ iPhone: "ML Sidecar" app ────────────────────────────┐
+┌─ iPhone: "Sidecar ML" app ────────────────────────────┐
 │  HTTP server · 12 on-device capabilities · Bonjour    │
 └──────────────── http://<phone-ip>:8080 ───────────────┘
         ▲ REST + SSE (curl · Python · OpenAI SDK)
@@ -29,7 +29,7 @@ Shazam — and the Apple Intelligence LLM behind an **OpenAI-compatible**
 
 ## Quickstart
 
-**1. Run the app** — build [`ML-Sidecar`](https://github.com/AndersFB/ML-Sidecar)
+**1. Run the app** — build [`Sidecar-ML`](https://github.com/AndersFB/Sidecar-ML)
 onto your iPhone with Xcode and tap **Start Server**. The dashboard shows the
 URL (e.g. `http://192.168.1.20:8080`) plus a QR code. Keep the app in the
 foreground — iOS suspends network servers in the background (there's a
