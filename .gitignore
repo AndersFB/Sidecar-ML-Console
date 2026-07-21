@@ -1,0 +1,17 @@
+# The iOS app is its own git repository — keep it out of this one.
+My iPhone Toolkit/
+
+# Node / webapp
+node_modules/
+dist/
+coverage/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local tooling & OS noise
+.claude/
+.DS_Store
+*.local
