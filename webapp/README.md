@@ -27,6 +27,16 @@ The file is committed so the iOS app can link people straight to it on GitHub.
 After changing the console, re-run `npm run build` and commit the regenerated
 file with your change.
 
+For a one-click download there is also a GitHub release asset with a stable
+URL — this is what the iOS app should link:
+
+    https://github.com/AndersFB/Sidecar-ML-Console/releases/latest/download/sidecar-ml-console.html
+
+After building, committing and pushing a console change, run `npm run release`
+to update it (replaces the asset on the release for the current package.json
+version, or creates the release if the version is new; needs an authenticated
+GitHub CLI).
+
 Notes:
 
 - Serve over **http://localhost** (the default dev server). An `https://` origin
