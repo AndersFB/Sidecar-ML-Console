@@ -24,7 +24,9 @@ export default function App() {
     () => new Map(capabilities.map((capability) => [capability.id, capability])),
     [capabilities],
   );
-  const selectedCapability = capabilityById.get(selected.capabilityId);
+  const selectedCapability = selected.capabilityId
+    ? capabilityById.get(selected.capabilityId)
+    : undefined;
 
   const groups = useMemo(() => {
     const names: string[] = [];
@@ -59,7 +61,9 @@ export default function App() {
               </p>
               <ul className="max-md:flex max-md:gap-1">
                 {PANELS.filter((panel) => panel.group === group).map((panel) => {
-                  const capability = capabilityById.get(panel.capabilityId);
+                  const capability = panel.capabilityId
+                    ? capabilityById.get(panel.capabilityId)
+                    : undefined;
                   const available = capability?.available ?? false;
                   const isSelected = panel.id === selected.id;
                   return (
@@ -79,16 +83,18 @@ export default function App() {
                           className={isSelected ? 'text-cyan-a' : 'text-ink-3'}
                         />
                         <span className="flex-1">{panel.title}</span>
-                        <span
-                          title={capability ? (available ? 'Ready' : capability.reason) : 'Unknown'}
-                          className={`size-1.5 rounded-full ${
-                            status !== 'online'
-                              ? 'bg-ink-3/40'
-                              : available
-                                ? 'bg-mint'
-                                : 'bg-amber-a'
-                          }`}
-                        />
+                        {panel.capabilityId && (
+                          <span
+                            title={capability ? (available ? 'Ready' : capability.reason) : 'Unknown'}
+                            className={`size-1.5 rounded-full ${
+                              status !== 'online'
+                                ? 'bg-ink-3/40'
+                                : available
+                                  ? 'bg-mint'
+                                  : 'bg-amber-a'
+                            }`}
+                          />
+                        )}
                       </button>
                     </li>
                   );

@@ -16,10 +16,12 @@ import { NlpPanel } from './NlpPanel';
 import { SoundPanel } from './SoundPanel';
 import { ShazamPanel } from './ShazamPanel';
 import { ImageGenPanel } from './ImageGenPanel';
+import { ApiDocsPanel } from './ApiDocsPanel';
 
 export interface PanelDef {
   id: string;
-  capabilityId: string;
+  /** Omitted for panels that aren't backed by a server capability (e.g. docs). */
+  capabilityId?: string;
   title: string;
   icon: string;
   group: string;
@@ -46,4 +48,6 @@ export const PANELS: PanelDef[] = [
   { id: 'speak', capabilityId: 'speech-speak', title: 'Speak', icon: 'speaker', group: 'Audio', component: SpeakPanel },
   { id: 'sound', capabilityId: 'sound', title: 'Sound Events', icon: 'audio-lines', group: 'Audio', component: SoundPanel },
   { id: 'shazam', capabilityId: 'shazam', title: 'Song ID', icon: 'music', group: 'Audio', component: ShazamPanel },
+
+  { id: 'api-docs', title: 'API Reference', icon: 'book', group: 'Reference', component: ApiDocsPanel },
 ];

@@ -22,7 +22,7 @@ Shazam — and the Apple Intelligence LLM behind an **OpenAI-compatible**
 
 | Path | What |
 |---|---|
-| [`webapp/`](webapp/) | React + Vite web console with a panel for every capability |
+| [`webapp/`](webapp/) | React + Vite web console with a panel for every capability and a built-in API reference |
 | [`examples/python/`](examples/python/) | `httpx` client, CLI, FastAPI integration, Bonjour discovery |
 | [`docs/API.md`](docs/API.md) | Full HTTP API reference |
 

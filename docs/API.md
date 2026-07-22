@@ -2,7 +2,8 @@
 
 Base URL: `http://<phone-ip>:<port>` (shown in the app; default port 8080).
 Everything is JSON with `snake_case` keys. If auth is enabled in the app,
-send `Authorization: Bearer <token>` on every request except `GET /health`.
+send `Authorization: Bearer <token>` on every request except `GET /` and
+`GET /health`.
 
 **Binary inputs** (images/audio) are accepted two ways — no multipart:
 
@@ -22,6 +23,12 @@ Supported audio containers: WAV, M4A/AAC, MP3, AIFF, CAF, FLAC
 ---
 
 ## Server
+
+### `GET /` *(no auth)*
+Service info — what a browser or scanner sees first:
+```json
+{ "app": "Sidecar ML", "version": "1.0", "capabilities": "/v1/capabilities" }
+```
 
 ### `GET /health` *(no auth)*
 ```json
