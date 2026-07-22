@@ -7,6 +7,9 @@ Plain HTTP + JSON — usable from any script, notebook or FastAPI app:
     phone = SidecarClient("http://192.168.1.20:8080")
     print(phone.health())
     print(phone.ocr("receipt.jpg")["text"])
+
+Every request is logged through loguru; silence it with
+`from loguru import logger; logger.disable("client")`.
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 import httpx
+from loguru import logger
 
 
 class SidecarError(RuntimeError):
@@ -23,6 +27,13 @@ class SidecarError(RuntimeError):
         super().__init__(f"[{status} {code}] {message}")
         self.status = status
         self.code = code
+
+
+def _elapsed(response: httpx.Response) -> str:
+    try:
+        return f" in {response.elapsed.total_seconds() * 1000:.0f}ms"
+    except RuntimeError:  # streaming response not fully read yet
+        return ""
 
 
 class SidecarClient:
@@ -35,12 +46,20 @@ class SidecarClient:
     # ------------------------------------------------------------------ core
 
     def _check(self, response: httpx.Response) -> Any:
+        label = f"{response.request.method} {response.request.url.path}"
         if response.is_error:
             try:
                 error = response.json()["error"]
-                raise SidecarError(response.status_code, error["code"], error["message"])
+                code, message = error["code"], error["message"]
             except (KeyError, ValueError):
+                logger.warning(f"{label} → HTTP {response.status_code}{_elapsed(response)}")
                 response.raise_for_status()
+                raise  # unreachable: raise_for_status always raises here
+            logger.warning(
+                f"{label} → {response.status_code} [{code}]{_elapsed(response)}: {message}"
+            )
+            raise SidecarError(response.status_code, code, message)
+        logger.info(f"{label} → {response.status_code}{_elapsed(response)}")
         return response.json()
 
     def _post_file(self, path: str, file: str | Path, content_type: str, params: dict | None = None) -> Any:
@@ -57,6 +76,10 @@ class SidecarClient:
         return self._check(self._client.get(path, params=params or {}))
 
     # ---------------------------------------------------------------- server
+
+    def info(self) -> dict:
+        """`GET /` — app name, version and where to find the capability list."""
+        return self._get("/")
 
     def health(self) -> dict:
         return self._get("/health")
@@ -95,11 +118,27 @@ class SidecarClient:
         out_path.write_bytes(base64.b64decode(result["data_base64"]))
         return out_path
 
+    def person_segmentation(
+        self, image: str | Path, out: str | Path, quality: str = "balanced"
+    ) -> Path:
+        """Saves the person-mask PNG (quality: fast | balanced | accurate)."""
+        result = self._post_file(
+            "/v1/vision/person-segmentation", image, "image/jpeg", {"quality": quality}
+        )
+        out_path = Path(out)
+        out_path.write_bytes(base64.b64decode(result["data_base64"]))
+        return out_path
+
     def faces(self, image: str | Path) -> dict:
         return self._post_file("/v1/vision/faces", image, "image/jpeg")
 
     def body_pose(self, image: str | Path) -> dict:
         return self._post_file("/v1/vision/body-pose", image, "image/jpeg")
+
+    def hand_pose(self, image: str | Path, max_hands: int = 2) -> dict:
+        return self._post_file(
+            "/v1/vision/hand-pose", image, "image/jpeg", {"max_hands": max_hands}
+        )
 
     def scan_document(self, image: str | Path, out: str | Path | None = None) -> dict:
         result = self._post_file("/v1/vision/document", image, "image/jpeg")
@@ -113,6 +152,10 @@ class SidecarClient:
         )
         return [base64.b64decode(item["b64_json"]) for item in result["data"]]
 
+    def image_styles(self) -> list[str]:
+        """Image-generation styles available on this device (needs Apple Intelligence)."""
+        return self._get("/v1/images/styles")["styles"]
+
     # ------------------------------------------------------------------ text
 
     def analyze_text(self, text: str, features: list[str] | None = None) -> dict:
@@ -121,13 +164,32 @@ class SidecarClient:
     def embed_text(self, *texts: str) -> dict:
         return self._post_json("/v1/nlp/embed", {"texts": list(texts)})
 
+    def text_similarity(self, text_a: str, text_b: str) -> dict:
+        """`{"distance", "cosine"}` between two texts (lower distance = closer)."""
+        return self._post_json("/v1/nlp/similarity", {"text_a": text_a, "text_b": text_b})
+
     def translate(self, text: str, target: str, source: str | None = None) -> str:
         result = self._post_json(
             "/v1/translation/translate", {"text": text, "source": source, "target": target}
         )
         return result["translations"][0]["text"]
 
+    def translation_languages(
+        self, source: str | None = None, target: str | None = None
+    ) -> dict:
+        """All supported languages; pass source+target to get `pair_status`."""
+        params = {}
+        if source:
+            params["source"] = source
+        if target:
+            params["target"] = target
+        return self._get("/v1/translation/languages", params)
+
     # ------------------------------------------------------------------ chat
+
+    def models(self) -> list[dict]:
+        """OpenAI-style model list; contains `apple-fm` when the LLM is available."""
+        return self._get("/v1/models")["data"]
 
     def chat(self, prompt: str, system: str | None = None, max_tokens: int | None = None) -> str:
         messages = ([{"role": "system", "content": system}] if system else []) + [
@@ -146,6 +208,7 @@ class SidecarClient:
         messages = ([{"role": "system", "content": system}] if system else []) + [
             {"role": "user", "content": prompt}
         ]
+        logger.info("POST /v1/chat/completions (stream)")
         with self._client.stream(
             "POST", "/v1/chat/completions", json={"messages": messages, "stream": True}
         ) as response:
@@ -181,8 +244,16 @@ class SidecarClient:
             "/v1/speech/transcribe", audio, "audio/wav", {"locale": locale}
         )
 
+    def transcribe_locales(self) -> dict:
+        """`{"supported": [...], "installed": [...]}` transcription language models."""
+        return self._get("/v1/speech/transcribe/locales")
+
     def classify_sound(self, audio: str | Path) -> dict:
         return self._post_file("/v1/sound/classify", audio, "audio/wav")
+
+    def sound_labels(self) -> list[str]:
+        """All ~300 class labels the sound classifier can emit."""
+        return self._get("/v1/sound/labels")["labels"]
 
     def shazam(self, audio: str | Path) -> dict:
         return self._post_file("/v1/shazam/match", audio, "audio/wav")
