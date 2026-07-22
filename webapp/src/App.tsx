@@ -101,6 +101,18 @@ export default function App() {
         <p className="px-2 text-[10px] leading-relaxed text-ink-3 max-md:hidden">
           All inference runs on the iPhone. Keep the Sidecar ML app in the foreground.
         </p>
+
+        <p className="px-2 text-[10px] leading-relaxed text-ink-3 max-md:hidden">
+          Developed by{' '}
+          <a
+            href="https://fogbunzel.dk"
+            target="_blank"
+            rel="noreferrer"
+            className="text-ink-2 underline decoration-line underline-offset-2 transition-colors hover:text-cyan-a"
+          >
+            fogbunzel.dk
+          </a>
+        </p>
       </aside>
 
       {/* Main panel */}
