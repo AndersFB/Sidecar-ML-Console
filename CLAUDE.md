@@ -16,7 +16,8 @@ the HTTP API reference. The phone speaks REST + SSE over `http://<phone-ip>:8080
   → `webapp/`); run all npm commands from this subdirectory, not the repo root.
 - `examples/python/` — `httpx` client, typer CLI, FastAPI proxy, Bonjour
   discovery.
-- `docs/API.md` — the full HTTP API reference.
+- `docs/API.md` — API conventions + endpoint index; the per-area reference
+  pages live in `docs/api/*.md`.
 
 ## Console (`webapp/webapp/`)
 
@@ -54,7 +55,7 @@ npm run release      # build, then publish the single file as a GitHub release a
 
 When the server gains/changes an endpoint, update all five in lockstep:
 
-1. `docs/API.md`
+1. `docs/API.md` + the per-area pages in `docs/api/`
 2. the in-app API Reference — `webapp/webapp/src/docs/apiReference.ts` +
    `ApiDocsPanel.tsx`
 3. the Python client — `examples/python/.../client.py` (one wrapper per route)
