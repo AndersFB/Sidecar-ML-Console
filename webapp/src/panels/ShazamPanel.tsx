@@ -4,11 +4,12 @@ import type { ShazamResponse } from '../api/types';
 import { AudioInput } from '../components/AudioInput';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { useStoredState } from '../utils/useStoredState';
 
 export function ShazamPanel() {
   const { config } = useConnection();
-  const [audio, setAudio] = useState<Blob | null>(null);
-  const [result, setResult] = useState<ShazamResponse | null>(null);
+  const [audio, setAudio] = useStoredState<Blob | null>('sidecar.shazam.audio', null);
+  const [result, setResult] = useStoredState<ShazamResponse | null>('sidecar.shazam.result', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);

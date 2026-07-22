@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { api } from '../api/client';
 import type { ClassifyResponse } from '../api/types';
-import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
+import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { useStoredState } from '../utils/useStoredState';
 
 export function ClassifyPanel() {
   const { config } = useConnection();
-  const [image, setImage] = useState<PickedImage | null>(null);
-  const [result, setResult] = useState<ClassifyResponse | null>(null);
+  const [image, setImage] = useStoredState<PickedImage | null>(
+    'sidecar.classify.image',
+    null,
+    revivePickedImage,
+  );
+  const [result, setResult] = useStoredState<ClassifyResponse | null>('sidecar.classify.result', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
@@ -35,7 +40,11 @@ export function ClassifyPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResult(null); }} />
+      <ImageDropzone
+        key={inputKey}
+        preview={image?.previewUrl ?? null}
+        onPick={(picked) => { setImage(picked); setResult(null); }}
+      />
       <div className="flex items-center gap-3">
         <Button onClick={() => void run()} disabled={!image || busy}>Classify</Button>
         <Button variant="ghost" onClick={clear} disabled={busy || (!image && !result && !error)}>

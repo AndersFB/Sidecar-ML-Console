@@ -6,16 +6,28 @@ export interface PickedImage {
   previewUrl: string;
 }
 
+/**
+ * Rebuilds the preview URL for a PickedImage restored from storage —
+ * blob: URLs die with the page that created them.
+ */
+export function revivePickedImage(stored: PickedImage | null): PickedImage | null {
+  return stored ? { file: stored.file, previewUrl: URL.createObjectURL(stored.file) } : stored;
+}
+
 export function ImageDropzone({
   onPick,
   label = 'Drop an image or click to browse',
+  preview: previewProp,
 }: {
   onPick: (image: PickedImage) => void;
   label?: string;
+  /** Controlled preview URL; pass null for the empty state. Omit to let the dropzone track its own. */
+  preview?: string | null;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [internalPreview, setInternalPreview] = useState<string | null>(null);
+  const preview = previewProp !== undefined ? previewProp : internalPreview;
   // Each object URL pins its file in memory until revoked.
   const previewRef = useRef<string | null>(null);
 
@@ -32,7 +44,7 @@ export function ImageDropzone({
       if (previewRef.current) URL.revokeObjectURL(previewRef.current);
       const url = URL.createObjectURL(file);
       previewRef.current = url;
-      setPreview(url);
+      setInternalPreview(url);
       onPick({ file, previewUrl: url });
     },
     [onPick],

@@ -4,11 +4,15 @@ import type { SoundClassifyResponse } from '../api/types';
 import { AudioInput } from '../components/AudioInput';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { useStoredState } from '../utils/useStoredState';
 
 export function SoundPanel() {
   const { config } = useConnection();
-  const [audio, setAudio] = useState<Blob | null>(null);
-  const [result, setResult] = useState<SoundClassifyResponse | null>(null);
+  const [audio, setAudio] = useStoredState<Blob | null>('sidecar.sound.audio', null);
+  const [result, setResult] = useStoredState<SoundClassifyResponse | null>(
+    'sidecar.sound.result',
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);

@@ -4,6 +4,7 @@ import type { NlpAnalyzeResponse } from '../api/types';
 import { Button, Card, ErrorBanner, JsonViewer, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredState } from '../utils/useStoredState';
 
 const ENTITY_COLORS: Record<string, string> = {
   person: 'bg-indigo-a/40',
@@ -42,7 +43,7 @@ export function NlpPanel() {
     'sidecar.nlp.text',
     'Tim Cook announced that Apple will open a new research lab in Copenhagen next spring.',
   );
-  const [result, setResult] = useState<NlpAnalyzeResponse | null>(null);
+  const [result, setResult] = useStoredState<NlpAnalyzeResponse | null>('sidecar.nlp.result', null);
   const [showRaw, setShowRaw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

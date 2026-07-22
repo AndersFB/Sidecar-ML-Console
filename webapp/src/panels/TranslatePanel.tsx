@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { Button, Card, CopyButton, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredState } from '../utils/useStoredState';
 
 export function TranslatePanel() {
   const { config, connectedConfig, status } = useConnection();
@@ -10,7 +11,7 @@ export function TranslatePanel() {
   const [languages, setLanguages] = useState<string[]>([]);
   const [source, setSource] = usePersistentState('sidecar.translate.source', 'en');
   const [target, setTarget] = usePersistentState('sidecar.translate.target', 'de');
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useStoredState<string | null>('sidecar.translate.result', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

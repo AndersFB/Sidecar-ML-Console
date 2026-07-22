@@ -5,13 +5,17 @@ import { AudioInput } from '../components/AudioInput';
 import { Button, Card, CopyButton, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredState } from '../utils/useStoredState';
 
 export function TranscribePanel() {
   const { config, connectedConfig, status } = useConnection();
-  const [audio, setAudio] = useState<Blob | null>(null);
+  const [audio, setAudio] = useStoredState<Blob | null>('sidecar.transcribe.audio', null);
   const [locale, setLocale] = usePersistentState('sidecar.transcribe.locale', 'en-US');
   const [installed, setInstalled] = useState<string[]>([]);
-  const [result, setResult] = useState<TranscribeResponse | null>(null);
+  const [result, setResult] = useStoredState<TranscribeResponse | null>(
+    'sidecar.transcribe.result',
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);

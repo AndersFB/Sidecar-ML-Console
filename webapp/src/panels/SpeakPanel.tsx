@@ -4,6 +4,7 @@ import type { Voice } from '../api/types';
 import { Button, Card, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredState } from '../utils/useStoredState';
 
 export function SpeakPanel() {
   const { config, connectedConfig, status } = useConnection();
@@ -14,8 +15,8 @@ export function SpeakPanel() {
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voice, setVoice] = usePersistentState('sidecar.speak.voice', '');
   const [rate, setRate] = usePersistentState('sidecar.speak.rate', 0.5);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [duration, setDuration] = useState<number | null>(null);
+  const [audioUrl, setAudioUrl] = useStoredState<string | null>('sidecar.speak.audio', null);
+  const [duration, setDuration] = useStoredState<number | null>('sidecar.speak.duration', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

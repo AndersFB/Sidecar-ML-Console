@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { api, envelopeToDataUrl } from '../api/client';
-import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
+import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredState } from '../utils/useStoredState';
 
 export function SubjectMaskPanel() {
   const { config } = useConnection();
-  const [image, setImage] = useState<PickedImage | null>(null);
+  const [image, setImage] = useStoredState<PickedImage | null>(
+    'sidecar.subjectmask.image',
+    null,
+    revivePickedImage,
+  );
   const [mode, setMode] = usePersistentState<'cutout' | 'mask'>('sidecar.subjectmask.mode', 'cutout');
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultUrl, setResultUrl] = useStoredState<string | null>('sidecar.subjectmask.result', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
@@ -37,7 +42,11 @@ export function SubjectMaskPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResultUrl(null); }} />
+      <ImageDropzone
+        key={inputKey}
+        preview={image?.previewUrl ?? null}
+        onPick={(picked) => { setImage(picked); setResultUrl(null); }}
+      />
       <div className="flex items-center gap-3">
         <select
           value={mode}

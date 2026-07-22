@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { Button, Card, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredState } from '../utils/useStoredState';
 
 export function ImageGenPanel() {
   const { config, connectedConfig, status } = useConnection();
@@ -13,7 +14,7 @@ export function ImageGenPanel() {
   const [styles, setStyles] = useState<string[]>([]);
   const [style, setStyle] = usePersistentState('sidecar.imagegen.style', '');
   const [count, setCount] = usePersistentState('sidecar.imagegen.count', 1);
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useStoredState<string[]>('sidecar.imagegen.images', []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

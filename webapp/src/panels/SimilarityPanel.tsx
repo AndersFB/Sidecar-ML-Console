@@ -1,15 +1,27 @@
 import { useState } from 'react';
 import { api } from '../api/client';
 import type { SimilarityResponse } from '../api/types';
-import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
+import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { useStoredState } from '../utils/useStoredState';
 
 export function SimilarityPanel() {
   const { config } = useConnection();
-  const [imageA, setImageA] = useState<PickedImage | null>(null);
-  const [imageB, setImageB] = useState<PickedImage | null>(null);
-  const [result, setResult] = useState<SimilarityResponse | null>(null);
+  const [imageA, setImageA] = useStoredState<PickedImage | null>(
+    'sidecar.similarity.imageA',
+    null,
+    revivePickedImage,
+  );
+  const [imageB, setImageB] = useStoredState<PickedImage | null>(
+    'sidecar.similarity.imageB',
+    null,
+    revivePickedImage,
+  );
+  const [result, setResult] = useStoredState<SimilarityResponse | null>(
+    'sidecar.similarity.result',
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
@@ -45,11 +57,13 @@ export function SimilarityPanel() {
         <ImageDropzone
           key={`a-${inputKey}`}
           label="Image A"
+          preview={imageA?.previewUrl ?? null}
           onPick={(picked) => { setImageA(picked); setResult(null); }}
         />
         <ImageDropzone
           key={`b-${inputKey}`}
           label="Image B"
+          preview={imageB?.previewUrl ?? null}
           onPick={(picked) => { setImageB(picked); setResult(null); }}
         />
       </div>

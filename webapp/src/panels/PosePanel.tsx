@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import type { BodyPoseResponse, HandPoseResponse } from '../api/types';
-import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
+import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { drawImageWithPoints, drawSkeletons } from '../utils/overlay';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredState } from '../utils/useStoredState';
 
 type PoseResult =
   | { kind: 'body'; response: BodyPoseResponse }
@@ -13,9 +14,13 @@ type PoseResult =
 
 export function PosePanel() {
   const { config } = useConnection();
-  const [image, setImage] = useState<PickedImage | null>(null);
+  const [image, setImage] = useStoredState<PickedImage | null>(
+    'sidecar.pose.image',
+    null,
+    revivePickedImage,
+  );
   const [mode, setMode] = usePersistentState<'body' | 'hand'>('sidecar.pose.mode', 'body');
-  const [result, setResult] = useState<PoseResult | null>(null);
+  const [result, setResult] = useStoredState<PoseResult | null>('sidecar.pose.result', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
@@ -78,7 +83,11 @@ export function PosePanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResult(null); }} />
+      <ImageDropzone
+        key={inputKey}
+        preview={image?.previewUrl ?? null}
+        onPick={(picked) => { setImage(picked); setResult(null); }}
+      />
       <div className="flex items-center gap-3">
         <select
           value={mode}

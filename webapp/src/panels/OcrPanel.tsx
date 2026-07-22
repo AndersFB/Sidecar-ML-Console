@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import type { OcrResponse } from '../api/types';
-import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
+import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, CopyButton, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { drawImageWithBoxes } from '../utils/overlay';
+import { useStoredState } from '../utils/useStoredState';
 
 export function OcrPanel() {
   const { config } = useConnection();
-  const [image, setImage] = useState<PickedImage | null>(null);
-  const [result, setResult] = useState<OcrResponse | null>(null);
+  const [image, setImage] = useStoredState<PickedImage | null>(
+    'sidecar.ocr.image',
+    null,
+    revivePickedImage,
+  );
+  const [result, setResult] = useStoredState<OcrResponse | null>('sidecar.ocr.result', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
@@ -54,7 +59,11 @@ export function OcrPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResult(null); }} />
+      <ImageDropzone
+        key={inputKey}
+        preview={image?.previewUrl ?? null}
+        onPick={(picked) => { setImage(picked); setResult(null); }}
+      />
       <div className="flex items-center gap-3">
         <Button onClick={() => void run()} disabled={!image || busy}>Read text</Button>
         <Button variant="ghost" onClick={clear} disabled={busy || (!image && !result && !error)}>

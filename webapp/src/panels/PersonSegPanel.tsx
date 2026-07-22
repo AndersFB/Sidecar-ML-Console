@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { api, envelopeToDataUrl } from '../api/client';
-import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
+import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredState } from '../utils/useStoredState';
 
 export function PersonSegPanel() {
   const { config } = useConnection();
-  const [image, setImage] = useState<PickedImage | null>(null);
+  const [image, setImage] = useStoredState<PickedImage | null>(
+    'sidecar.personseg.image',
+    null,
+    revivePickedImage,
+  );
   const [quality, setQuality] = usePersistentState('sidecar.personseg.quality', 'balanced');
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultUrl, setResultUrl] = useStoredState<string | null>('sidecar.personseg.result', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
@@ -37,7 +42,11 @@ export function PersonSegPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResultUrl(null); }} />
+      <ImageDropzone
+        key={inputKey}
+        preview={image?.previewUrl ?? null}
+        onPick={(picked) => { setImage(picked); setResultUrl(null); }}
+      />
       <div className="flex items-center gap-3">
         <select
           value={quality}
