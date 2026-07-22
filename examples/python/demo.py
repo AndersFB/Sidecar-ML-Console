@@ -54,6 +54,11 @@ class SegQuality(str, Enum):
     accurate = "accurate"
 
 
+class ScanFormat(str, Enum):
+    png = "png"
+    jpeg = "jpeg"
+
+
 @app.callback()
 def main(
     base_url: str = typer.Option(
@@ -188,11 +193,16 @@ def hand_pose(image: Path = IMAGE, max_hands: int = typer.Option(2)) -> None:
 
 @app.command()
 def document(
-    image: Path = IMAGE, out: Path = typer.Option(Path("corrected.png"), help="Corrected scan output")
+    image: Path = IMAGE,
+    out: Path | None = typer.Option(None, help="Corrected scan output (default: corrected.<format>)"),
+    format: ScanFormat = typer.Option(
+        ScanFormat.png, help="Scan encoding — jpeg is typically 5-10x smaller"
+    ),
 ) -> None:
     """Detect a document and save the perspective-corrected scan."""
+    out = out or Path(f"corrected.{format.value}")
     with phone() as p:
-        result = p.scan_document(image, out)
+        result = p.scan_document(image, out, format=format.value)
         if result.pop("corrected", None):
             logger.success(f"saved corrected scan to {out}")
         dump(result)

@@ -140,8 +140,14 @@ class SidecarClient:
             "/v1/vision/hand-pose", image, "image/jpeg", {"max_hands": max_hands}
         )
 
-    def scan_document(self, image: str | Path, out: str | Path | None = None) -> dict:
-        result = self._post_file("/v1/vision/document", image, "image/jpeg")
+    def scan_document(
+        self, image: str | Path, out: str | Path | None = None, format: str = "png"
+    ) -> dict:
+        """Detect a document; `format` (png | jpeg) sets the corrected-scan
+        encoding — JPEG is typically 5-10x smaller for photographed documents."""
+        result = self._post_file(
+            "/v1/vision/document", image, "image/jpeg", {"format": format}
+        )
         if out and result.get("corrected"):
             Path(out).write_bytes(base64.b64decode(result["corrected"]["data_base64"]))
         return result

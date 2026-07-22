@@ -208,12 +208,19 @@ export const API_REFERENCE: EndpointGroup[] = [
       {
         method: 'POST',
         path: '/v1/vision/document',
-        summary: 'Document detection — quad corners plus a perspective-corrected PNG scan.',
-        params: [{ name: 'correct', note: 'true (default) → include corrected scan' }],
+        summary: 'Document detection — quad corners plus a perspective-corrected scan (PNG or JPEG).',
+        params: [
+          { name: 'correct', note: 'true (default) → include corrected scan' },
+          {
+            name: 'format',
+            note: 'png (default) | jpeg — JPEG is typically 5-10x smaller for photographed documents',
+          },
+        ],
         response:
-          '{ "detected": true, "confidence": 0.97,\n  "quad_px": [{ "x": …, "y": … }, … 4 corners],\n  "corrected": { "content_type": "image/png", "data_base64": "…" } }',
-        curl: "curl {{BASE}}/v1/vision/document -H 'Content-Type: image/jpeg' --data-binary @paper.jpg",
-        python: 'phone.scan_document("paper.jpg", out="scan.png")',
+          '{ "detected": true, "confidence": 0.97,\n  "quad_px": [{ "x": …, "y": … }, … 4 corners],\n  "corrected": { "content_type": "image/png", "data_base64": "…" } }\n// Accept: image/jpeg with format=jpeg → raw scan bytes instead of the JSON envelope\n// (JSON regardless of Accept when no document / correct=false — check Content-Type)',
+        curl:
+          "curl '{{BASE}}/v1/vision/document?format=jpeg' -H 'Content-Type: image/jpeg' \\\n     -H 'Accept: image/jpeg' --data-binary @paper.jpg -o scan.jpg",
+        python: 'phone.scan_document("paper.jpg", out="scan.jpg", format="jpeg")',
       },
     ],
   },

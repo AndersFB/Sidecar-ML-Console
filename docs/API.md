@@ -87,12 +87,27 @@ All coordinates are **pixels with the origin at the top-left** of the image
 | `POST /v1/vision/faces` | Boxes, roll/yaw/pitch (deg), landmark points per region | |
 | `POST /v1/vision/body-pose` | `persons[].joints{name: {x, y, confidence}}` | |
 | `POST /v1/vision/hand-pose` | `hands[].chirality + joints` | `?max_hands=2` |
-| `POST /v1/vision/document` | Document quad + perspective-corrected PNG | `?correct=true` |
+| `POST /v1/vision/document` | Document quad + perspective-corrected scan | `?correct=true&format=png\|jpeg` |
 
 ```bash
 curl http://PHONE:8080/v1/vision/ocr -H 'Content-Type: image/jpeg' \
      --data-binary @receipt.jpg
 ```
+
+`/v1/vision/document` extras: `format=png|jpeg` (default `png`; `jpg` also
+accepted, anything else → `400`) sets the corrected-scan encoding — JPEG is
+typically 5-10x smaller for photographed documents. When `Accept` names the
+chosen format's content type, the raw corrected scan replaces the JSON
+envelope:
+
+```bash
+curl 'http://PHONE:8080/v1/vision/document?format=jpeg' -H 'Content-Type: image/jpeg' \
+     -H 'Accept: image/jpeg' --data-binary @paper.jpg -o scan.jpg
+```
+
+If no document is detected (or `correct=false`) there is no scan, and the
+response is JSON regardless of `Accept` — raw-mode clients should check the
+response `Content-Type`.
 
 ---
 

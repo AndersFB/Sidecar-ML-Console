@@ -330,10 +330,14 @@ async def vision_hand_pose(
 
 @app.post("/v1/vision/document", tags=["Vision"])
 async def vision_document(
-    file: UploadFile = File(...), correct: bool | None = None
+    file: UploadFile = File(...),
+    correct: bool | None = None,
+    format: Literal["png", "jpeg"] | None = None,
 ) -> Any:
     """Document quad + perspective-corrected scan (JSON envelope, as the phone sends it)."""
-    return await _post_upload("/v1/vision/document", file, _params(correct=correct))
+    return await _post_upload(
+        "/v1/vision/document", file, _params(correct=correct, format=format)
+    )
 
 
 # ------------------------------------------------------------ image gen
