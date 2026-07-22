@@ -3,36 +3,57 @@ import type { Box, Joint, Point } from '../api/types';
 const STROKE = '#22d3ee';
 const FILL = 'rgba(34, 211, 238, 0.12)';
 
+/**
+ * Longest canvas edge. Panels render results at ≤768 CSS px, but visited
+ * panels stay mounted while hidden, and a canvas sized to a 12 MP photo pins
+ * ~46 MB of bitmap for the page's lifetime. ~2x the display width keeps
+ * retina sharpness at a bounded (~7 MB) cost; server pixel coordinates are
+ * scaled to match.
+ */
+const MAX_CANVAS_EDGE = 1600;
+
+function prepareCanvas(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement,
+): { ctx: CanvasRenderingContext2D; s: number } | null {
+  const longEdge = Math.max(image.naturalWidth, image.naturalHeight, 1);
+  const s = Math.min(1, MAX_CANVAS_EDGE / longEdge);
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * s));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * s));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return { ctx, s };
+}
+
 /** Draws the source image and labeled boxes onto a canvas (pixel space). */
 export function drawImageWithBoxes(
   canvas: HTMLCanvasElement,
   image: HTMLImageElement,
   boxes: { box: Box; label?: string }[],
 ): void {
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  const prepared = prepareCanvas(canvas, image);
+  if (!prepared) return;
+  const { ctx, s } = prepared;
 
-  ctx.drawImage(image, 0, 0);
-  const scale = Math.max(1, image.naturalWidth / 600);
+  const scale = Math.max(1, canvas.width / 600);
   ctx.lineWidth = 2 * scale;
   ctx.font = `${12 * scale}px ui-monospace, monospace`;
 
   for (const { box, label } of boxes) {
     ctx.strokeStyle = STROKE;
     ctx.fillStyle = FILL;
-    ctx.fillRect(box.x, box.y, box.width, box.height);
-    ctx.strokeRect(box.x, box.y, box.width, box.height);
+    ctx.fillRect(box.x * s, box.y * s, box.width * s, box.height * s);
+    ctx.strokeRect(box.x * s, box.y * s, box.width * s, box.height * s);
     if (label) {
       const text = label.length > 40 ? `${label.slice(0, 40)}…` : label;
       const metrics = ctx.measureText(text);
       const pad = 4 * scale;
-      const y = Math.max(box.y - 16 * scale, 0);
+      const y = Math.max(box.y * s - 16 * scale, 0);
       ctx.fillStyle = 'rgba(11, 16, 32, 0.85)';
-      ctx.fillRect(box.x, y, metrics.width + pad * 2, 16 * scale);
+      ctx.fillRect(box.x * s, y, metrics.width + pad * 2, 16 * scale);
       ctx.fillStyle = STROKE;
-      ctx.fillText(text, box.x + pad, y + 12 * scale);
+      ctx.fillText(text, box.x * s + pad, y + 12 * scale);
     }
   }
 }
@@ -42,18 +63,16 @@ export function drawImageWithPoints(
   image: HTMLImageElement,
   pointGroups: Point[][],
 ): void {
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  const prepared = prepareCanvas(canvas, image);
+  if (!prepared) return;
+  const { ctx, s } = prepared;
 
-  ctx.drawImage(image, 0, 0);
-  const radius = Math.max(2, image.naturalWidth / 300);
+  const radius = Math.max(2, canvas.width / 300);
   for (const points of pointGroups) {
     ctx.fillStyle = STROKE;
     for (const point of points) {
       ctx.beginPath();
-      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      ctx.arc(point.x * s, point.y * s, radius, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -79,13 +98,11 @@ export function drawSkeletons(
   image: HTMLImageElement,
   persons: { joints: Record<string, Joint> }[],
 ): void {
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  const prepared = prepareCanvas(canvas, image);
+  if (!prepared) return;
+  const { ctx, s } = prepared;
 
-  ctx.drawImage(image, 0, 0);
-  const scale = Math.max(1, image.naturalWidth / 600);
+  const scale = Math.max(1, canvas.width / 600);
 
   for (const person of persons) {
     ctx.strokeStyle = STROKE;
@@ -95,8 +112,8 @@ export function drawSkeletons(
       const b = person.joints[to];
       if (a && b && a.confidence > 0.2 && b.confidence > 0.2) {
         ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
+        ctx.moveTo(a.x * s, a.y * s);
+        ctx.lineTo(b.x * s, b.y * s);
         ctx.stroke();
       }
     }
@@ -104,7 +121,7 @@ export function drawSkeletons(
     for (const joint of Object.values(person.joints)) {
       if (joint.confidence > 0.2) {
         ctx.beginPath();
-        ctx.arc(joint.x, joint.y, 3 * scale, 0, Math.PI * 2);
+        ctx.arc(joint.x * s, joint.y * s, 3 * scale, 0, Math.PI * 2);
         ctx.fill();
       }
     }

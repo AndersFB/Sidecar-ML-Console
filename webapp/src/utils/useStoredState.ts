@@ -19,6 +19,10 @@ export function useStoredState<T>(
   // overwrite the stored one; a user change before that wins over the store.
   const hydratedRef = useRef(false);
   const dirtyRef = useRef(false);
+  // Hydration itself must not echo back into the store — values here can be
+  // multi-MB Files/results, and re-writing them on every page load is pure
+  // structured-clone I/O.
+  const skipWriteRef = useRef(false);
   const reviveRef = useRef(revive);
   reviveRef.current = revive;
 
@@ -27,6 +31,7 @@ export function useStoredState<T>(
     void idbGet<T>(key).then((stored) => {
       if (cancelled) return;
       if (stored !== undefined && !dirtyRef.current) {
+        skipWriteRef.current = true;
         setValue(reviveRef.current ? reviveRef.current(stored) : stored);
       }
       hydratedRef.current = true;
@@ -38,12 +43,18 @@ export function useStoredState<T>(
 
   useEffect(() => {
     if (!hydratedRef.current) return;
+    if (skipWriteRef.current) {
+      skipWriteRef.current = false;
+      return;
+    }
     void idbSet(key, value);
   }, [key, value]);
 
   const set = useCallback<Dispatch<SetStateAction<T>>>((action) => {
     dirtyRef.current = true;
     hydratedRef.current = true;
+    // A real change always writes, even if hydration queued a skip.
+    skipWriteRef.current = false;
     setValue(action);
   }, []);
 

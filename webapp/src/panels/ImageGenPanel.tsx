@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { Button, Card, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { base64ToBlob } from '../utils/base64';
 import { usePersistentState } from '../utils/usePersistentState';
-import { useStoredState } from '../utils/useStoredState';
+import { useStoredMediaUrls } from '../utils/useStoredMedia';
 
 export function ImageGenPanel() {
   const { config, connectedConfig, status } = useConnection();
@@ -14,7 +15,7 @@ export function ImageGenPanel() {
   const [styles, setStyles] = useState<string[]>([]);
   const [style, setStyle] = usePersistentState('sidecar.imagegen.style', '');
   const [count, setCount] = usePersistentState('sidecar.imagegen.count', 1);
-  const [images, setImages] = useStoredState<string[]>('sidecar.imagegen.images', []);
+  const [images, setImages] = useStoredMediaUrls('sidecar.imagegen.images');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +52,7 @@ export function ImageGenPanel() {
     setError(null);
     try {
       const response = await api.imageGenerate(config, prompt, count, style || undefined);
-      setImages(response.data.map((item) => `data:image/png;base64,${item.b64_json}`));
+      setImages(response.data.map((item) => base64ToBlob(item.b64_json, 'image/png')));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

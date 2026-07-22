@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { api, envelopeToDataUrl } from '../api/client';
 import type { DocumentResponse } from '../api/types';
 import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
@@ -17,6 +17,12 @@ export function DocumentPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
+  // The corrected scan can be multiple MB of base64 — build its URL once per
+  // result, not twice per render.
+  const correctedUrl = useMemo(
+    () => (result?.corrected ? envelopeToDataUrl(result.corrected) : null),
+    [result],
+  );
 
   const clear = () => {
     setImage(null);
@@ -61,19 +67,19 @@ export function DocumentPanel() {
       {result && !result.detected && (
         <Card><p className="text-sm text-ink-2">No document found in this image.</p></Card>
       )}
-      {result?.detected && result.corrected && image && (
+      {result?.detected && correctedUrl && image && (
         <div className="grid gap-3 sm:grid-cols-2">
           <Card title="Original">
             <img src={image.previewUrl} alt="Original" className="w-full rounded-lg" />
           </Card>
           <Card title={`Corrected scan (confidence ${(result.confidence ?? 0).toFixed(2)})`}>
             <img
-              src={envelopeToDataUrl(result.corrected)}
+              src={correctedUrl}
               alt="Corrected document"
               className="w-full rounded-lg"
             />
             <a
-              href={envelopeToDataUrl(result.corrected)}
+              href={correctedUrl}
               download="scan.png"
               className="mt-2 inline-block text-xs text-cyan-a"
             >

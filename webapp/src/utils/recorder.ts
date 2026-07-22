@@ -61,6 +61,21 @@ export class MicRecorder {
     }
   }
 
+  /**
+   * Stops capture and drops the buffered audio without encoding — for
+   * teardown paths (unmount, errors) where nobody wants the WAV. Without
+   * this, an abandoned recorder keeps the mic live and grows ~11.5 MB/min.
+   */
+  discard(): void {
+    this.cleanup?.();
+    this.cleanup = null;
+    this.stream?.getTracks().forEach((track) => track.stop());
+    this.stream = null;
+    void this.context?.close();
+    this.context = null;
+    this.chunks = [];
+  }
+
   async stop(): Promise<Blob> {
     const context = this.context;
     if (!context) throw new Error('Not recording');

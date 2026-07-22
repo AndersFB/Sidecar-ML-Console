@@ -24,7 +24,7 @@ import type {
   TranslationLanguages,
   Voice,
 } from './types';
-import { blobToBase64 } from '../utils/base64';
+import { base64ToBlob, blobToBase64 } from '../utils/base64';
 import { log } from '../utils/log';
 
 export interface ApiConfig {
@@ -148,8 +148,13 @@ export function envelopeToDataUrl(envelope: ImageEnvelope): string {
   return `data:${envelope.content_type};base64,${envelope.data_base64}`;
 }
 
-export function audioEnvelopeToDataUrl(envelope: AudioEnvelope): string {
-  return `data:${envelope.content_type};base64,${envelope.data_base64}`;
+/** Decode once to a Blob so the base64 string can be garbage-collected. */
+export function envelopeToBlob(envelope: ImageEnvelope): Blob {
+  return base64ToBlob(envelope.data_base64, envelope.content_type);
+}
+
+export function audioEnvelopeToBlob(envelope: AudioEnvelope): Blob {
+  return base64ToBlob(envelope.data_base64, envelope.content_type);
 }
 
 // MARK: Endpoints

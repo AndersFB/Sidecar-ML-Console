@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { api, envelopeToDataUrl } from '../api/client';
+import { api, envelopeToBlob } from '../api/client';
 import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredMediaUrl } from '../utils/useStoredMedia';
 import { useStoredState } from '../utils/useStoredState';
 
 export function SubjectMaskPanel() {
@@ -14,14 +15,14 @@ export function SubjectMaskPanel() {
     revivePickedImage,
   );
   const [mode, setMode] = usePersistentState<'cutout' | 'mask'>('sidecar.subjectmask.mode', 'cutout');
-  const [resultUrl, setResultUrl] = useStoredState<string | null>('sidecar.subjectmask.result', null);
+  const [resultUrl, setResult] = useStoredMediaUrl('sidecar.subjectmask.result');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
 
   const clear = () => {
     setImage(null);
-    setResultUrl(null);
+    setResult(null);
     setError(null);
     setInputKey((key) => key + 1);
   };
@@ -32,7 +33,7 @@ export function SubjectMaskPanel() {
     setError(null);
     try {
       const envelope = await api.subjectMask(config, image.file, mode);
-      setResultUrl(envelopeToDataUrl(envelope));
+      setResult(envelopeToBlob(envelope));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -45,7 +46,7 @@ export function SubjectMaskPanel() {
       <ImageDropzone
         key={inputKey}
         preview={image?.previewUrl ?? null}
-        onPick={(picked) => { setImage(picked); setResultUrl(null); }}
+        onPick={(picked) => { setImage(picked); setResult(null); }}
       />
       <div className="flex items-center gap-3">
         <select

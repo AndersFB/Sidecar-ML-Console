@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MicRecorder } from '../utils/recorder';
 import { Button } from './Primitives';
 
@@ -9,6 +9,16 @@ export function AudioInput({ onAudio }: { onAudio: (audio: Blob, name: string) =
   const [recording, setRecording] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
+
+  // Panels remount this component (key bump) on Clear — without teardown an
+  // in-progress recording would keep the mic live and buffering forever.
+  useEffect(
+    () => () => {
+      recorderRef.current?.discard();
+      recorderRef.current = null;
+    },
+    [],
+  );
 
   const toggleRecording = async () => {
     setMicError(null);
@@ -24,6 +34,7 @@ export function AudioInput({ onAudio }: { onAudio: (audio: Blob, name: string) =
         onAudio(blob, 'recording.wav');
       }
     } catch (error) {
+      recorderRef.current?.discard();
       setRecording(false);
       setMicError(
         error instanceof Error

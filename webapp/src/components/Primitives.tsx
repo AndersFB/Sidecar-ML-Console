@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 export function Card({ title, children, actions }: {
   title?: string;
@@ -66,9 +66,12 @@ export function ErrorBanner({ message }: { message: string }) {
 }
 
 export function JsonViewer({ value }: { value: unknown }) {
+  // Results can be 100+ KB of JSON; don't re-stringify on unrelated renders
+  // (every mounted panel re-renders on each connection-state change).
+  const text = useMemo(() => JSON.stringify(value, null, 2), [value]);
   return (
     <pre className="max-h-96 overflow-auto rounded-xl bg-navy/80 p-3 font-mono text-xs leading-relaxed text-ink-2">
-      {JSON.stringify(value, null, 2)}
+      {text}
     </pre>
   );
 }

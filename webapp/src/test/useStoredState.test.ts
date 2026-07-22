@@ -1,8 +1,10 @@
 import 'fake-indexeddb/auto';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { idbGet, idbSet } from '../utils/idb';
 import { useStoredState } from '../utils/useStoredState';
+
+vi.mock('../utils/idb', { spy: true });
 
 describe('useStoredState', () => {
   it('persists changes and hydrates them on the next mount', async () => {
@@ -31,6 +33,22 @@ describe('useStoredState', () => {
     act(() => hook.result.current[1]('typed-first'));
     await waitFor(async () => expect(await idbGet('t.race')).toBe('typed-first'));
     expect(hook.result.current[0]).toBe('typed-first');
+    hook.unmount();
+  });
+
+  it('does not write back what hydration just read', async () => {
+    await idbSet('t.noecho', 'stored');
+    vi.mocked(idbSet).mockClear();
+
+    const hook = renderHook(() => useStoredState('t.noecho', 'initial'));
+    await waitFor(() => expect(hook.result.current[0]).toBe('stored'));
+    // Give the write effect a macrotask to (wrongly) fire before asserting.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(idbSet).not.toHaveBeenCalled();
+
+    // A real change after hydration still writes.
+    act(() => hook.result.current[1]('changed'));
+    await waitFor(async () => expect(await idbGet('t.noecho')).toBe('changed'));
     hook.unmount();
   });
 

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { api, audioEnvelopeToDataUrl } from '../api/client';
+import { api, audioEnvelopeToBlob } from '../api/client';
 import type { Voice } from '../api/types';
 import { Button, Card, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredMediaUrl } from '../utils/useStoredMedia';
 import { useStoredState } from '../utils/useStoredState';
 
 export function SpeakPanel() {
@@ -15,7 +16,7 @@ export function SpeakPanel() {
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voice, setVoice] = usePersistentState('sidecar.speak.voice', '');
   const [rate, setRate] = usePersistentState('sidecar.speak.rate', 0.5);
-  const [audioUrl, setAudioUrl] = useStoredState<string | null>('sidecar.speak.audio', null);
+  const [audioUrl, setAudio] = useStoredMediaUrl('sidecar.speak.audio');
   const [duration, setDuration] = useStoredState<number | null>('sidecar.speak.duration', null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export function SpeakPanel() {
 
   const clear = () => {
     setText('');
-    setAudioUrl(null);
+    setAudio(null);
     setDuration(null);
     setError(null);
   };
@@ -54,7 +55,7 @@ export function SpeakPanel() {
     setError(null);
     try {
       const envelope = await api.speak(config, text, voice || undefined, rate);
-      setAudioUrl(audioEnvelopeToDataUrl(envelope));
+      setAudio(audioEnvelopeToBlob(envelope));
       setDuration(envelope.duration_s);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

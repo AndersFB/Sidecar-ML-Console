@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { api, envelopeToDataUrl } from '../api/client';
+import { api, envelopeToBlob } from '../api/client';
 import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
+import { useStoredMediaUrl } from '../utils/useStoredMedia';
 import { useStoredState } from '../utils/useStoredState';
 
 export function PersonSegPanel() {
@@ -14,14 +15,14 @@ export function PersonSegPanel() {
     revivePickedImage,
   );
   const [quality, setQuality] = usePersistentState('sidecar.personseg.quality', 'balanced');
-  const [resultUrl, setResultUrl] = useStoredState<string | null>('sidecar.personseg.result', null);
+  const [resultUrl, setResult] = useStoredMediaUrl('sidecar.personseg.result');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
 
   const clear = () => {
     setImage(null);
-    setResultUrl(null);
+    setResult(null);
     setError(null);
     setInputKey((key) => key + 1);
   };
@@ -32,7 +33,7 @@ export function PersonSegPanel() {
     setError(null);
     try {
       const envelope = await api.personSegmentation(config, image.file, quality);
-      setResultUrl(envelopeToDataUrl(envelope));
+      setResult(envelopeToBlob(envelope));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -45,7 +46,7 @@ export function PersonSegPanel() {
       <ImageDropzone
         key={inputKey}
         preview={image?.previewUrl ?? null}
-        onPick={(picked) => { setImage(picked); setResultUrl(null); }}
+        onPick={(picked) => { setImage(picked); setResult(null); }}
       />
       <div className="flex items-center gap-3">
         <select
