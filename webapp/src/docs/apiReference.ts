@@ -53,7 +53,7 @@ export const API_REFERENCE: EndpointGroup[] = [
         summary:
           'Every capability with live availability — unavailable ones include a human-readable reason (e.g. "Needs Apple Intelligence").',
         response:
-          '[{ "id": "chat", "name": "Chat (On-Device LLM)", "category": "language",\n   "summary": "…", "requires_network": false, "available": true,\n   "reason": null, "endpoints": ["POST /v1/chat/completions"] }, …]',
+          '[{ "id": "chat", "name": "Chat (On-Device LLM)", "category": "language",\n   "summary": "…", "requires_network": false, "available": false,\n   "reason": "This device does not support Apple Intelligence.",\n   "endpoints": ["POST /v1/chat/completions", "GET /v1/models"] }, …]\n// "reason" appears only when available is false; absent optional fields are omitted, not null',
         curl: 'curl {{BASE}}/v1/capabilities',
         python: 'phone.capabilities()',
       },
@@ -164,7 +164,7 @@ export const API_REFERENCE: EndpointGroup[] = [
           { name: 'mode', note: 'cutout (default) | mask' },
           { name: 'crop', note: 'true → crop to subject bounds' },
         ],
-        response: '{ "content_type": "image/png", "data_base64": "…" }',
+        response: '{ "content_type": "image/png", "data_base64": "…", "width": 480, "height": 640 }',
         curl:
           "curl {{BASE}}/v1/vision/subject-mask -H 'Content-Type: image/jpeg' -H 'Accept: image/png' \\\n     --data-binary @photo.jpg -o cutout.png",
         python: 'phone.remove_background("photo.jpg", "cutout.png")',
@@ -174,7 +174,7 @@ export const API_REFERENCE: EndpointGroup[] = [
         path: '/v1/vision/person-segmentation',
         summary: 'Person mask as PNG.',
         params: [{ name: 'quality', note: 'fast | balanced (default) | accurate' }],
-        response: '{ "content_type": "image/png", "data_base64": "…" }',
+        response: '{ "content_type": "image/png", "data_base64": "…", "width": 480, "height": 640 }',
         curl:
           "curl '{{BASE}}/v1/vision/person-segmentation?quality=accurate' \\\n     -H 'Content-Type: image/jpeg' -H 'Accept: image/png' --data-binary @photo.jpg -o mask.png",
         python: 'phone.person_segmentation("photo.jpg", "mask.png", quality="accurate")',
@@ -326,7 +326,7 @@ export const API_REFERENCE: EndpointGroup[] = [
           { name: 'source', note: 'optional — auto-detected when omitted' },
           { name: 'target', note: 'required' },
         ],
-        response: '{ "translations": [{ "text": "Guten Morgen" }] }',
+        response: '{ "translations": [{ "text": "Guten Morgen", "detected_source": "en" }] }',
         curl:
           'curl {{BASE}}/v1/translation/translate -H \'Content-Type: application/json\' -d \'{\n  "text": "Good morning", "target": "de"\n}\'',
         python: 'phone.translate("Good morning", target="de")',
@@ -345,7 +345,7 @@ export const API_REFERENCE: EndpointGroup[] = [
           { name: 'features', note: 'subset of ["language", "sentiment", "entities", "tokens"]; default all' },
         ],
         response:
-          '{ "language": "en", "language_hypotheses": { "en": 0.99 }, "sentiment": 0.6,\n  "entities": [{ "text": "Copenhagen", "type": "place", "start": 10, "end": 20 }],\n  "tokens": [{ "text": "loved", "lemma": "love", "part_of_speech": "Verb" }] }',
+          '{ "language": "en", "language_hypotheses": [{ "language": "en", "confidence": 0.996 }], "sentiment": 0.6,\n  "entities": [{ "text": "Copenhagen", "type": "place", "start": 8, "end": 18 }],\n  "tokens": [{ "text": "loved", "lemma": "love", "pos": "Verb" }] }',
         curl:
           'curl {{BASE}}/v1/nlp/analyze -H \'Content-Type: application/json\' -d \'{\n  "text": "I loved Copenhagen last summer."\n}\'',
         python: 'phone.analyze_text("I loved Copenhagen last summer.")',
@@ -404,7 +404,7 @@ export const API_REFERENCE: EndpointGroup[] = [
         path: '/v1/shazam/match',
         summary: 'Identify a song via the Shazam catalog — the one endpoint that needs internet. ~10 s of audio is plenty.',
         response:
-          '{ "matched": true, "media": { "title": "…", "artist": "…", "album": "…",\n  "apple_music_url": "…", "artwork_url": "…", "offset_s": 32.1 } }',
+          '{ "matched": true, "media": { "title": "…", "artist": "…", "album": "…",\n  "apple_music_url": "…", "artwork_url": "…", "offset_s": 32.1, "shazam_id": "605236711" } }',
         curl: "curl {{BASE}}/v1/shazam/match -H 'Content-Type: audio/wav' --data-binary @clip.wav",
         python: 'phone.shazam("clip.wav")',
       },
