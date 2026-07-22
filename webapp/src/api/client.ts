@@ -25,6 +25,7 @@ import type {
   Voice,
 } from './types';
 import { blobToBase64 } from '../utils/base64';
+import { log } from '../utils/log';
 
 export interface ApiConfig {
   baseUrl: string;
@@ -65,19 +66,59 @@ async function parseError(response: Response): Promise<never> {
   } catch {
     // non-JSON error body
   }
+  log.warn(`server error ${response.status} [${code}]: ${message}`);
   throw new ApiError(response.status, code, message);
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const PENDING_HINT_MS = 5000;
+
+/** All API calls funnel through here so every request/response/failure is logged. */
+export async function request(
+  config: ApiConfig,
+  path: string,
+  init: RequestInit,
+  detail = '',
+): Promise<Response> {
+  const url = joinUrl(config.baseUrl, path);
+  const method = init.method ?? 'GET';
+  const label = `${method} ${url}${detail ? ` (${detail})` : ''}`;
+  const started = performance.now();
+  log.info(`→ ${label}`);
+  const pendingHint = setTimeout(() => {
+    log.warn(
+      `⏳ ${label} still pending after ${PENDING_HINT_MS / 1000}s — usually the address is wrong or the phone is unreachable (different network, app in background, phone asleep).`,
+    );
+  }, PENDING_HINT_MS);
+  try {
+    const response = await fetch(url, init);
+    const ms = Math.round(performance.now() - started);
+    const line = `← ${response.status} ${method} ${path} (${ms}ms)`;
+    if (response.ok) log.info(line);
+    else log.warn(line);
+    return response;
+  } catch (error) {
+    const ms = Math.round(performance.now() - started);
+    log.error(`✕ ${method} ${url} failed after ${ms}ms:`, error);
+    throw error;
+  } finally {
+    clearTimeout(pendingHint);
+  }
+}
+
 async function getJson<T>(config: ApiConfig, path: string): Promise<T> {
-  const response = await fetch(joinUrl(config.baseUrl, path), {
-    headers: headers(config),
-  });
+  const response = await request(config, path, { headers: headers(config) });
   if (!response.ok) await parseError(response);
   return response.json();
 }
 
 async function postJson<T>(config: ApiConfig, path: string, body: unknown): Promise<T> {
-  const response = await fetch(joinUrl(config.baseUrl, path), {
+  const response = await request(config, path, {
     method: 'POST',
     headers: headers(config, { 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
@@ -87,13 +128,18 @@ async function postJson<T>(config: ApiConfig, path: string, body: unknown): Prom
 }
 
 async function postBinary<T>(config: ApiConfig, path: string, blob: Blob): Promise<T> {
-  const response = await fetch(joinUrl(config.baseUrl, path), {
-    method: 'POST',
-    headers: headers(config, {
-      'Content-Type': blob.type || 'application/octet-stream',
-    }),
-    body: blob,
-  });
+  const response = await request(
+    config,
+    path,
+    {
+      method: 'POST',
+      headers: headers(config, {
+        'Content-Type': blob.type || 'application/octet-stream',
+      }),
+      body: blob,
+    },
+    formatBytes(blob.size),
+  );
   if (!response.ok) await parseError(response);
   return response.json();
 }

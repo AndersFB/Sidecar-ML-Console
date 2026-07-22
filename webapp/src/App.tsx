@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { Icon } from './components/Icon';
 import { SidecarLogo } from './components/SidecarLogo';
 import { ErrorBanner } from './components/Primitives';
 import { PANELS } from './panels/registry';
 import { useConnection } from './state/ConnectionContext';
+import { usePersistentState } from './utils/usePersistentState';
 
 export default function App() {
   const { capabilities, status } = useConnection();
-  const [selectedId, setSelectedId] = useState('chat');
+  const [selectedId, setSelectedId] = usePersistentState('sidecar.panel', 'chat');
 
   const selected = PANELS.find((panel) => panel.id === selectedId) ?? PANELS[0];
   const SelectedComponent = selected.component;
@@ -30,7 +31,7 @@ export default function App() {
   return (
     <div className="flex h-full max-md:flex-col">
       {/* Sidebar (top bar on small screens) */}
-      <aside className="flex flex-col gap-3 border-line p-3 max-md:border-b md:w-64 md:shrink-0 md:border-r">
+      <aside className="flex flex-col gap-3 border-line p-3 max-md:border-b md:w-72 md:shrink-0 md:border-r">
         <header className="flex items-center gap-2 px-1 pt-1">
           <SidecarLogo size={30} />
           <div>

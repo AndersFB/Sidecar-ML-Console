@@ -4,11 +4,12 @@ import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { drawImageWithPoints, drawSkeletons } from '../utils/overlay';
+import { usePersistentState } from '../utils/usePersistentState';
 
 export function PosePanel() {
   const { config } = useConnection();
   const [image, setImage] = useState<PickedImage | null>(null);
-  const [mode, setMode] = useState<'body' | 'hand'>('body');
+  const [mode, setMode] = usePersistentState<'body' | 'hand'>('sidecar.pose.mode', 'body');
   const [summary, setSummary] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

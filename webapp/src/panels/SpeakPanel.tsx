@@ -3,13 +3,14 @@ import { api, audioEnvelopeToDataUrl } from '../api/client';
 import type { Voice } from '../api/types';
 import { Button, Card, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { usePersistentState } from '../utils/usePersistentState';
 
 export function SpeakPanel() {
   const { config, status } = useConnection();
   const [text, setText] = useState('Hello! I am your iPhone, speaking over the local network.');
   const [voices, setVoices] = useState<Voice[]>([]);
-  const [voice, setVoice] = useState('');
-  const [rate, setRate] = useState(0.5);
+  const [voice, setVoice] = usePersistentState('sidecar.speak.voice', '');
+  const [rate, setRate] = usePersistentState('sidecar.speak.rate', 0.5);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -19,9 +20,15 @@ export function SpeakPanel() {
     if (status !== 'online') return;
     api
       .voices(config)
-      .then((result) => setVoices(result.voices))
+      .then((result) => {
+        setVoices(result.voices);
+        // A restored voice may no longer exist on the phone — fall back to default.
+        setVoice((current) =>
+          current && !result.voices.some((item) => item.identifier === current) ? '' : current,
+        );
+      })
       .catch(() => setVoices([]));
-  }, [config, status]);
+  }, [config, status, setVoice]);
 
   const run = async () => {
     if (!text.trim()) return;

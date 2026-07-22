@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { Button, Card, CopyButton, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { usePersistentState } from '../utils/usePersistentState';
 
 export function TranslatePanel() {
   const { config, status } = useConnection();
   const [text, setText] = useState('');
   const [languages, setLanguages] = useState<string[]>([]);
-  const [source, setSource] = useState('en');
-  const [target, setTarget] = useState('de');
+  const [source, setSource] = usePersistentState('sidecar.translate.source', 'en');
+  const [target, setTarget] = usePersistentState('sidecar.translate.target', 'de');
   const [result, setResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

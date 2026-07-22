@@ -10,7 +10,8 @@ const STATUS_STYLE: Record<string, { dot: string; text: string; label: string }>
 };
 
 export function ConnectionPanel() {
-  const { baseUrl, token, status, health, error, setBaseUrl, setToken, connect } = useConnection();
+  const { baseUrl, token, status, health, error, recentUrls, setBaseUrl, setToken, connect } =
+    useConnection();
   const [showToken, setShowToken] = useState(false);
   const style = STATUS_STYLE[status];
 
@@ -38,18 +39,20 @@ export function ConnectionPanel() {
         </button>
       </div>
 
-      <div className="flex gap-2">
-        <input
-          className={`${inputClass} min-w-0 flex-1 font-mono text-xs`}
-          value={baseUrl}
-          onChange={(event) => setBaseUrl(event.target.value)}
-          placeholder="http://192.168.1.20:8080"
-          aria-label="Server address"
-        />
-        <button type="submit" className="btn-gradient shrink-0 px-3 py-1.5 text-xs">
-          Connect
-        </button>
-      </div>
+      {/* Full-width row so the whole address is readable; history via datalist. */}
+      <input
+        className={`${inputClass} w-full font-mono text-xs`}
+        value={baseUrl}
+        onChange={(event) => setBaseUrl(event.target.value)}
+        placeholder="http://192.168.1.20:8080"
+        aria-label="Server address"
+        list="sidecar-url-history"
+      />
+      <datalist id="sidecar-url-history">
+        {recentUrls.map((url) => (
+          <option key={url} value={url} />
+        ))}
+      </datalist>
 
       {showToken && (
         <input
@@ -60,6 +63,10 @@ export function ConnectionPanel() {
           aria-label="Bearer token"
         />
       )}
+
+      <button type="submit" className="btn-gradient w-full px-3 py-1.5 text-xs">
+        Connect
+      </button>
 
       {status === 'offline' && error && (
         <p className="text-xs text-coral">

@@ -4,13 +4,17 @@ import { streamChat } from '../api/sse';
 import type { ChatMessage } from '../api/types';
 import { Button, ErrorBanner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { usePersistentState } from '../utils/usePersistentState';
 
 export function ChatPanel() {
   const { config } = useConnection();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = usePersistentState<ChatMessage[]>('sidecar.chat.history', []);
   const [input, setInput] = useState('');
-  const [system, setSystem] = useState('You are a concise, helpful assistant.');
-  const [useStreaming, setUseStreaming] = useState(true);
+  const [system, setSystem] = usePersistentState(
+    'sidecar.chat.system',
+    'You are a concise, helpful assistant.',
+  );
+  const [useStreaming, setUseStreaming] = usePersistentState('sidecar.chat.stream', true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);

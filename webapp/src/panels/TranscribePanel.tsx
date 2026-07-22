@@ -4,11 +4,12 @@ import type { TranscribeResponse } from '../api/types';
 import { AudioInput } from '../components/AudioInput';
 import { Button, Card, CopyButton, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { usePersistentState } from '../utils/usePersistentState';
 
 export function TranscribePanel() {
   const { config, status } = useConnection();
   const [audio, setAudio] = useState<Blob | null>(null);
-  const [locale, setLocale] = useState('en-US');
+  const [locale, setLocale] = usePersistentState('sidecar.transcribe.locale', 'en-US');
   const [installed, setInstalled] = useState<string[]>([]);
   const [result, setResult] = useState<TranscribeResponse | null>(null);
   const [busy, setBusy] = useState(false);

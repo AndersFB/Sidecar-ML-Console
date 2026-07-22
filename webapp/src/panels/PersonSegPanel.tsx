@@ -3,11 +3,12 @@ import { api, envelopeToDataUrl } from '../api/client';
 import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { usePersistentState } from '../utils/usePersistentState';
 
 export function PersonSegPanel() {
   const { config } = useConnection();
   const [image, setImage] = useState<PickedImage | null>(null);
-  const [quality, setQuality] = useState('balanced');
+  const [quality, setQuality] = usePersistentState('sidecar.personseg.quality', 'balanced');
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

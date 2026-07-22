@@ -1,6 +1,7 @@
 import type { ApiConfig } from './client';
 import { ApiError, joinUrl } from './client';
 import type { ChatChunk, ChatMessage } from './types';
+import { log } from '../utils/log';
 
 /**
  * Streams a chat completion over SSE. EventSource can't POST, so this parses
@@ -13,15 +14,23 @@ export async function streamChat(
   onDelta: (text: string) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const response = await fetch(joinUrl(config.baseUrl, '/v1/chat/completions'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(config.token ? { Authorization: `Bearer ${config.token}` } : {}),
-    },
-    body: JSON.stringify({ ...body, stream: true }),
-    signal,
-  });
+  const url = joinUrl(config.baseUrl, '/v1/chat/completions');
+  log.info(`→ POST ${url} (SSE stream)`);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(config.token ? { Authorization: `Bearer ${config.token}` } : {}),
+      },
+      body: JSON.stringify({ ...body, stream: true }),
+      signal,
+    });
+  } catch (error) {
+    log.error(`✕ POST ${url} (SSE stream) failed:`, error);
+    throw error;
+  }
 
   if (!response.ok || !response.body) {
     let message = `HTTP ${response.status}`;
@@ -33,11 +42,15 @@ export async function streamChat(
     } catch {
       // ignore
     }
+    log.warn(`← ${response.status} POST /v1/chat/completions (stream) [${code}]: ${message}`);
     throw new ApiError(response.status, code, message);
   }
 
   for await (const data of parseSSEStream(response.body)) {
-    if (data === '[DONE]') return;
+    if (data === '[DONE]') {
+      log.info('← SSE stream complete');
+      return;
+    }
     let parsed: unknown;
     try {
       parsed = JSON.parse(data);

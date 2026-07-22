@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { Button, Card, ErrorBanner, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { usePersistentState } from '../utils/usePersistentState';
 
 export function ImageGenPanel() {
   const { config, status } = useConnection();
   const [prompt, setPrompt] = useState('a cozy lighthouse on a cliff at sunset');
   const [styles, setStyles] = useState<string[]>([]);
-  const [style, setStyle] = useState('');
-  const [count, setCount] = useState(1);
+  const [style, setStyle] = usePersistentState('sidecar.imagegen.style', '');
+  const [count, setCount] = usePersistentState('sidecar.imagegen.count', 1);
   const [images, setImages] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,10 +20,13 @@ export function ImageGenPanel() {
       .imageStyles(config)
       .then((result) => {
         setStyles(result.styles);
-        if (result.styles.length > 0) setStyle(result.styles[0]);
+        // Keep a restored style if the phone still offers it; otherwise default.
+        setStyle((current) =>
+          current && result.styles.includes(current) ? current : (result.styles[0] ?? ''),
+        );
       })
       .catch(() => setStyles([]));
-  }, [config, status]);
+  }, [config, status, setStyle]);
 
   const run = async () => {
     if (!prompt.trim()) return;
