@@ -6,6 +6,11 @@ import { Button, ErrorBanner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
 
+/** ~100 exchanges. Persistence silently stops at the ~5 MB localStorage
+ * quota, and every persisted write re-serializes the whole transcript — so
+ * the transcript keeps only the newest messages. */
+const MAX_MESSAGES = 200;
+
 export function ChatPanel() {
   const { config } = useConnection();
   const [messages, setMessages] = usePersistentState<ChatMessage[]>('sidecar.chat.history', []);
@@ -24,7 +29,8 @@ export function ChatPanel() {
     if (!text || busy) return;
     setError(null);
     setInput('');
-    const history: ChatMessage[] = [...messages, { role: 'user', content: text }];
+    const userMessage: ChatMessage = { role: 'user', content: text };
+    const history = [...messages, userMessage].slice(-MAX_MESSAGES);
     setMessages(history);
     setBusy(true);
 
@@ -34,7 +40,8 @@ export function ChatPanel() {
 
     try {
       if (useStreaming) {
-        setMessages([...history, { role: 'assistant', content: '' }]);
+        const assistantSeed: ChatMessage = { role: 'assistant', content: '' };
+        setMessages([...history, assistantSeed].slice(-MAX_MESSAGES));
         abortRef.current = new AbortController();
         await streamChat(
           config,
@@ -53,8 +60,11 @@ export function ChatPanel() {
         );
       } else {
         const response = await api.chat(config, outbound);
-        const content = response.choices[0]?.message.content ?? '';
-        setMessages([...history, { role: 'assistant', content }]);
+        const assistantMessage: ChatMessage = {
+          role: 'assistant',
+          content: response.choices[0]?.message.content ?? '',
+        };
+        setMessages([...history, assistantMessage].slice(-MAX_MESSAGES));
       }
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError')) {

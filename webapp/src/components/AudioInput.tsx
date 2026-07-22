@@ -2,10 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { MicRecorder } from '../utils/recorder';
 import { Button } from './Primitives';
 
+/** Recording grows ~11.5 MB of buffered audio per minute and keeps doing so
+ * even while the panel is hidden, so cap it. Five minutes is far above any
+ * realistic clip and still well under the server's 50 MB upload cap. */
+const MAX_RECORDING_MS = 5 * 60 * 1000;
+
 /** File upload + microphone recording (encoded to WAV client-side). */
 export function AudioInput({ onAudio }: { onAudio: (audio: Blob, name: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MicRecorder | null>(null);
+  const autoStopRef = useRef<number | null>(null);
   const [recording, setRecording] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
@@ -14,11 +20,36 @@ export function AudioInput({ onAudio }: { onAudio: (audio: Blob, name: string) =
   // in-progress recording would keep the mic live and buffering forever.
   useEffect(
     () => () => {
+      if (autoStopRef.current !== null) clearTimeout(autoStopRef.current);
       recorderRef.current?.discard();
       recorderRef.current = null;
     },
     [],
   );
+
+  const finishRecording = async (autoStopped: boolean) => {
+    const recorder = recorderRef.current;
+    if (!recorder?.isRecording) return;
+    if (autoStopRef.current !== null) {
+      clearTimeout(autoStopRef.current);
+      autoStopRef.current = null;
+    }
+    try {
+      const blob = await recorder.stop();
+      setRecording(false);
+      const stamp = new Date().toISOString().slice(11, 19);
+      setFileName(`recording-${stamp}.wav${autoStopped ? ' (auto-stopped at 5 min)' : ''}`);
+      onAudio(blob, 'recording.wav');
+    } catch (error) {
+      recorder.discard();
+      setRecording(false);
+      setMicError(error instanceof Error ? error.message : 'Recording failed');
+    }
+  };
+  // The auto-stop timer must call the latest render's closure, not the one
+  // captured five minutes ago.
+  const finishRef = useRef(finishRecording);
+  finishRef.current = finishRecording;
 
   const toggleRecording = async () => {
     setMicError(null);
@@ -27,11 +58,12 @@ export function AudioInput({ onAudio }: { onAudio: (audio: Blob, name: string) =
         recorderRef.current = new MicRecorder();
         await recorderRef.current.start();
         setRecording(true);
+        autoStopRef.current = window.setTimeout(() => {
+          autoStopRef.current = null;
+          void finishRef.current(true);
+        }, MAX_RECORDING_MS);
       } else {
-        const blob = await recorderRef.current!.stop();
-        setRecording(false);
-        setFileName(`recording-${new Date().toISOString().slice(11, 19)}.wav`);
-        onAudio(blob, 'recording.wav');
+        await finishRecording(false);
       }
     } catch (error) {
       recorderRef.current?.discard();

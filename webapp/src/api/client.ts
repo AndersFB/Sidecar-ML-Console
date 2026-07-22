@@ -184,8 +184,8 @@ export const api = {
     postBinary<BodyPoseResponse>(c, '/v1/vision/body-pose', image),
   handPose: (c: ApiConfig, image: Blob) =>
     postBinary<HandPoseResponse>(c, '/v1/vision/hand-pose', image),
-  document: (c: ApiConfig, image: Blob) =>
-    postBinary<DocumentResponse>(c, '/v1/vision/document?correct=true', image),
+  document: (c: ApiConfig, image: Blob, format: 'png' | 'jpeg' = 'png') =>
+    postBinary<DocumentResponse>(c, `/v1/vision/document?correct=true&format=${format}`, image),
 
   nlpAnalyze: (c: ApiConfig, text: string, features?: string[]) =>
     postJson<NlpAnalyzeResponse>(c, '/v1/nlp/analyze', { text, features }),
