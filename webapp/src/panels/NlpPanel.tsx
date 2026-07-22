@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import type { NlpAnalyzeResponse } from '../api/types';
 import { Button, Card, ErrorBanner, JsonViewer, Spinner, inputClass } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
+import { usePersistentState } from '../utils/usePersistentState';
 
 const ENTITY_COLORS: Record<string, string> = {
   person: 'bg-indigo-a/40',
@@ -37,13 +38,21 @@ function HighlightedText({ text, result }: { text: string; result: NlpAnalyzeRes
 
 export function NlpPanel() {
   const { config } = useConnection();
-  const [text, setText] = useState(
+  const [text, setText] = usePersistentState(
+    'sidecar.nlp.text',
     'Tim Cook announced that Apple will open a new research lab in Copenhagen next spring.',
   );
   const [result, setResult] = useState<NlpAnalyzeResponse | null>(null);
   const [showRaw, setShowRaw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const clear = () => {
+    setText('');
+    setResult(null);
+    setError(null);
+    setShowRaw(false);
+  };
 
   const run = async () => {
     setBusy(true);
@@ -70,6 +79,9 @@ export function NlpPanel() {
       />
       <div className="flex items-center gap-3">
         <Button onClick={() => void run()} disabled={busy || !text.trim()}>Analyze</Button>
+        <Button variant="ghost" onClick={clear} disabled={busy || (!text && !result && !error)}>
+          Clear
+        </Button>
         {busy && <Spinner />}
       </div>
       {error && <ErrorBanner message={error} />}

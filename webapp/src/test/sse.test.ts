@@ -43,4 +43,24 @@ describe('parseSSEStream', () => {
     const events = await collect(streamOf('data:{"x":1}\n\n'));
     expect(events).toEqual(['{"x":1}']);
   });
+
+  it('handles CRLF line endings', async () => {
+    const events = await collect(streamOf('data: 1\r\n\r\ndata: 2\r\n\r\n'));
+    expect(events).toEqual(['1', '2']);
+  });
+
+  it('handles a CRLF split across network chunks', async () => {
+    const events = await collect(streamOf('data: 1\r', '\n\r\ndata: 2\r\n\r\n'));
+    expect(events).toEqual(['1', '2']);
+  });
+
+  it('handles CR-only line endings', async () => {
+    const events = await collect(streamOf('data: 1\r\rdata: 2\r\r'));
+    expect(events).toEqual(['1', '2']);
+  });
+
+  it('handles mixed line endings in one stream', async () => {
+    const events = await collect(streamOf('data: 1\r\n\r\ndata: 2\n\n'));
+    expect(events).toEqual(['1', '2']);
+  });
 });

@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -22,6 +23,12 @@ interface ConnectionState {
   capabilities: Capability[];
   error: string | null;
   config: ApiConfig;
+  /**
+   * Config snapshot from the last successful connect; null while disconnected.
+   * Use this (not `config`, which tracks the address field live) for fetches
+   * that should only re-run after an actual reconnect.
+   */
+  connectedConfig: ApiConfig | null;
   /** Successfully connected addresses, most recent first. */
   recentUrls: string[];
   setBaseUrl: (url: string) => void;
@@ -82,6 +89,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState(() => localStorage.getItem(STORAGE_TOKEN) ?? '');
   const [recentUrls, setRecentUrls] = usePersistentState<string[]>('sidecar.recentUrls', []);
   const [status, setStatus] = useState<ConnectionStatus>('idle');
+  const [connectedConfig, setConnectedConfig] = useState<ApiConfig | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -101,16 +109,23 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_TOKEN, value);
   }, []);
 
+  // Attempts can overlap (auto-connect to a dead address timing out long after
+  // a manual connect succeeded) — only the newest attempt may write state.
+  const attemptRef = useRef(0);
+
   const connect = useCallback(async () => {
+    const attempt = ++attemptRef.current;
     setStatus('connecting');
     setError(null);
     logConnectPreflight(config.baseUrl);
     try {
       const healthResult = await api.health(config);
       const caps = await api.capabilities(config);
+      if (attempt !== attemptRef.current) return;
       setHealth(healthResult);
       setCapabilities(caps);
       setStatus('online');
+      setConnectedConfig(config);
       setRecentUrls((current) =>
         [config.baseUrl, ...current.filter((url) => url !== config.baseUrl)].slice(0, 5),
       );
@@ -118,9 +133,11 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
         `connected: ${healthResult.app} ${healthResult.version} — up ${healthResult.uptime_s}s, ${caps.length} capabilities (${caps.filter((c) => c.available).length} available)`,
       );
     } catch (err) {
+      if (attempt !== attemptRef.current) return;
       setHealth(null);
       setCapabilities([]);
       setStatus('offline');
+      setConnectedConfig(null);
       setError(err instanceof Error ? err.message : String(err));
       logConnectFailure(config.baseUrl, err);
     }
@@ -141,12 +158,13 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
       capabilities,
       error,
       config,
+      connectedConfig,
       recentUrls,
       setBaseUrl,
       setToken,
       connect,
     }),
-    [baseUrl, token, status, health, capabilities, error, config, recentUrls, setBaseUrl, setToken, connect],
+    [baseUrl, token, status, health, capabilities, error, config, connectedConfig, recentUrls, setBaseUrl, setToken, connect],
   );
 
   return <ConnectionContext.Provider value={value}>{children}</ConnectionContext.Provider>;

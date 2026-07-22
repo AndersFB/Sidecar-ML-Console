@@ -11,6 +11,14 @@ export function DocumentPanel() {
   const [result, setResult] = useState<DocumentResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputKey, setInputKey] = useState(0);
+
+  const clear = () => {
+    setImage(null);
+    setResult(null);
+    setError(null);
+    setInputKey((key) => key + 1);
+  };
 
   const run = async () => {
     if (!image) return;
@@ -31,9 +39,12 @@ export function DocumentPanel() {
         Photograph a document at an angle — the phone finds it and returns a
         perspective-corrected scan.
       </p>
-      <ImageDropzone onPick={(picked) => { setImage(picked); setResult(null); }} />
+      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResult(null); }} />
       <div className="flex items-center gap-3">
         <Button onClick={() => void run()} disabled={!image || busy}>Scan document</Button>
+        <Button variant="ghost" onClick={clear} disabled={busy || (!image && !result && !error)}>
+          Clear
+        </Button>
         {busy && <Spinner />}
       </div>
       {error && <ErrorBanner message={error} />}

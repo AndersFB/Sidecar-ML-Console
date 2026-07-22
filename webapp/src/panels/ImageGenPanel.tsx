@@ -5,8 +5,11 @@ import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
 
 export function ImageGenPanel() {
-  const { config, status } = useConnection();
-  const [prompt, setPrompt] = useState('a cozy lighthouse on a cliff at sunset');
+  const { config, connectedConfig, status } = useConnection();
+  const [prompt, setPrompt] = usePersistentState(
+    'sidecar.imagegen.prompt',
+    'a cozy lighthouse on a cliff at sunset',
+  );
   const [styles, setStyles] = useState<string[]>([]);
   const [style, setStyle] = usePersistentState('sidecar.imagegen.style', '');
   const [count, setCount] = usePersistentState('sidecar.imagegen.count', 1);
@@ -15,18 +18,31 @@ export function ImageGenPanel() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status !== 'online') return;
+    if (status !== 'online' || !connectedConfig) return;
+    let cancelled = false;
     api
-      .imageStyles(config)
+      .imageStyles(connectedConfig)
       .then((result) => {
+        if (cancelled) return;
         setStyles(result.styles);
         // Keep a restored style if the phone still offers it; otherwise default.
         setStyle((current) =>
           current && result.styles.includes(current) ? current : (result.styles[0] ?? ''),
         );
       })
-      .catch(() => setStyles([]));
-  }, [config, status, setStyle]);
+      .catch(() => {
+        if (!cancelled) setStyles([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [connectedConfig, status, setStyle]);
+
+  const clear = () => {
+    setPrompt('');
+    setImages([]);
+    setError(null);
+  };
 
   const run = async () => {
     if (!prompt.trim()) return;
@@ -73,6 +89,13 @@ export function ImageGenPanel() {
           ))}
         </select>
         <Button onClick={() => void run()} disabled={busy || !prompt.trim()}>Generate</Button>
+        <Button
+          variant="ghost"
+          onClick={clear}
+          disabled={busy || (!prompt && images.length === 0 && !error)}
+        >
+          Clear
+        </Button>
         {busy && <Spinner label="Generating on-device…" />}
       </div>
       {error && <ErrorBanner message={error} />}

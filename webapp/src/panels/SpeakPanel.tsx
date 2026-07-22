@@ -6,8 +6,11 @@ import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
 
 export function SpeakPanel() {
-  const { config, status } = useConnection();
-  const [text, setText] = useState('Hello! I am your iPhone, speaking over the local network.');
+  const { config, connectedConfig, status } = useConnection();
+  const [text, setText] = usePersistentState(
+    'sidecar.speak.text',
+    'Hello! I am your iPhone, speaking over the local network.',
+  );
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voice, setVoice] = usePersistentState('sidecar.speak.voice', '');
   const [rate, setRate] = usePersistentState('sidecar.speak.rate', 0.5);
@@ -17,18 +20,32 @@ export function SpeakPanel() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status !== 'online') return;
+    if (status !== 'online' || !connectedConfig) return;
+    let cancelled = false;
     api
-      .voices(config)
+      .voices(connectedConfig)
       .then((result) => {
+        if (cancelled) return;
         setVoices(result.voices);
         // A restored voice may no longer exist on the phone — fall back to default.
         setVoice((current) =>
           current && !result.voices.some((item) => item.identifier === current) ? '' : current,
         );
       })
-      .catch(() => setVoices([]));
-  }, [config, status, setVoice]);
+      .catch(() => {
+        if (!cancelled) setVoices([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [connectedConfig, status, setVoice]);
+
+  const clear = () => {
+    setText('');
+    setAudioUrl(null);
+    setDuration(null);
+    setError(null);
+  };
 
   const run = async () => {
     if (!text.trim()) return;
@@ -81,6 +98,9 @@ export function SpeakPanel() {
           />
         </label>
         <Button onClick={() => void run()} disabled={busy || !text.trim()}>Synthesize</Button>
+        <Button variant="ghost" onClick={clear} disabled={busy || (!text && !audioUrl && !error)}>
+          Clear
+        </Button>
         {busy && <Spinner />}
       </div>
       {error && <ErrorBanner message={error} />}

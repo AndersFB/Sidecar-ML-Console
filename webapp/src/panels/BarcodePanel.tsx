@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import type { BarcodesResponse } from '../api/types';
 import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
@@ -12,29 +12,42 @@ export function BarcodePanel() {
   const [result, setResult] = useState<BarcodesResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputKey, setInputKey] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const clear = () => {
+    setImage(null);
+    setResult(null);
+    setError(null);
+    setInputKey((key) => key + 1);
+  };
+
+  // The canvas only mounts once `result` renders, so drawing must happen here.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !result || !image) return;
+    const element = new Image();
+    element.onload = () =>
+      drawImageWithBoxes(
+        canvas,
+        element,
+        result.barcodes.map((barcode) => ({
+          box: barcode.box_px,
+          label: barcode.symbology,
+        })),
+      );
+    element.src = image.previewUrl;
+    return () => {
+      element.onload = null;
+    };
+  }, [result, image]);
 
   const run = async () => {
     if (!image) return;
     setBusy(true);
     setError(null);
     try {
-      const response = await api.barcodes(config, image.file);
-      setResult(response);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const element = new Image();
-        element.onload = () =>
-          drawImageWithBoxes(
-            canvas,
-            element,
-            response.barcodes.map((barcode) => ({
-              box: barcode.box_px,
-              label: barcode.symbology,
-            })),
-          );
-        element.src = image.previewUrl;
-      }
+      setResult(await api.barcodes(config, image.file));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -44,9 +57,12 @@ export function BarcodePanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone onPick={(picked) => { setImage(picked); setResult(null); }} />
+      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResult(null); }} />
       <div className="flex items-center gap-3">
         <Button onClick={() => void run()} disabled={!image || busy}>Scan codes</Button>
+        <Button variant="ghost" onClick={clear} disabled={busy || (!image && !result && !error)}>
+          Clear
+        </Button>
         {busy && <Spinner />}
       </div>
       {error && <ErrorBanner message={error} />}

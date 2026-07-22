@@ -68,19 +68,34 @@ export async function streamChat(
   }
 }
 
-/** Yields the payload of each `data:` frame, handling chunk-boundary splits. */
+/**
+ * Yields the payload of each `data:` frame, handling chunk-boundary splits.
+ * The SSE spec allows CRLF, LF or CR line endings — all are normalized to LF.
+ */
 export async function* parseSSEStream(
   stream: ReadableStream<Uint8Array>,
 ): AsyncGenerator<string> {
   const decoder = new TextDecoder();
   const reader = stream.getReader();
   let buffer = '';
+  // A chunk-final CR is held back: it may be half of a CRLF pair whose LF
+  // arrives in the next chunk.
+  let carry = '';
 
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+      if (done) {
+        if (carry) buffer += '\n';
+      } else {
+        let text = carry + decoder.decode(value, { stream: true });
+        carry = '';
+        if (text.endsWith('\r')) {
+          carry = '\r';
+          text = text.slice(0, -1);
+        }
+        buffer += text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      }
 
       let boundary = buffer.indexOf('\n\n');
       while (boundary !== -1) {
@@ -95,6 +110,8 @@ export async function* parseSSEStream(
         }
         boundary = buffer.indexOf('\n\n');
       }
+
+      if (done) break;
     }
   } finally {
     reader.releaseLock();

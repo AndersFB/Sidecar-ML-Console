@@ -30,4 +30,33 @@ describe('OcrPanel', () => {
     expect(text).toHaveTextContent('HELLO SIDECAR');
     expect(screen.getByText(/Detected 1 line/)).toBeInTheDocument();
   });
+
+  it('keeps input and result across panel switches until Clear is pressed', async () => {
+    render(
+      <ConnectionProvider>
+        <App />
+      </ConnectionProvider>,
+    );
+    await waitFor(() => expect(screen.getByText(/Online/)).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: /OCR/ }));
+
+    const file = new File(['fake-png-bytes'], 'photo.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByTestId('image-input'), file);
+    await userEvent.click(screen.getByRole('button', { name: 'Read text' }));
+    await screen.findByTestId('ocr-text');
+
+    // Switch away: the panel stays mounted but hidden.
+    await userEvent.click(screen.getByRole('button', { name: 'Chat' }));
+    expect(screen.getByTestId('ocr-text')).not.toBeVisible();
+
+    // Switch back: input preview and result are still there.
+    await userEvent.click(screen.getByRole('button', { name: /OCR/ }));
+    expect(screen.getByTestId('ocr-text')).toBeVisible();
+    expect(screen.getByAltText('Selected input')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.queryByTestId('ocr-text')).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Selected input')).not.toBeInTheDocument();
+    expect(screen.getByText(/Drop an image or click to browse/)).toBeInTheDocument();
+  });
 });

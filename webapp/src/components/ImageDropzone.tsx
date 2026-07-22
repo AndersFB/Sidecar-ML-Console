@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { Icon } from './Icon';
 
 export interface PickedImage {
@@ -16,11 +16,22 @@ export function ImageDropzone({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  // Each object URL pins its file in memory until revoked.
+  const previewRef = useRef<string | null>(null);
+
+  useEffect(
+    () => () => {
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    },
+    [],
+  );
 
   const handleFile = useCallback(
     (file: File | undefined) => {
       if (!file || !file.type.startsWith('image/')) return;
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
       const url = URL.createObjectURL(file);
+      previewRef.current = url;
       setPreview(url);
       onPick({ file, previewUrl: url });
     },

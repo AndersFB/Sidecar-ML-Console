@@ -1,7 +1,8 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import { api } from '../api/client';
 import { ConnectionProvider } from '../state/ConnectionContext';
 import { BASE } from './msw/handlers';
 
@@ -17,6 +18,10 @@ describe('App shell + connection', () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem('sidecar.baseUrl', BASE);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('connects on load and shows capability status', async () => {
@@ -40,5 +45,18 @@ describe('App shell + connection', () => {
     await waitFor(() => expect(screen.getByText(/Online/)).toBeInTheDocument());
     await userEvent.click(screen.getByRole('button', { name: /Text Analysis/ }));
     expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument();
+  });
+
+  it('does not refetch capability lists while a new address is being typed', async () => {
+    const voicesSpy = vi.spyOn(api, 'voices');
+    renderApp();
+    await waitFor(() => expect(screen.getByText(/Online/)).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: /Speak/ }));
+    await waitFor(() => expect(voicesSpy).toHaveBeenCalledTimes(1));
+
+    // Editing the address must not re-fire the fetch until Connect succeeds.
+    await userEvent.type(screen.getByLabelText('Server address'), ':9999');
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(voicesSpy).toHaveBeenCalledTimes(1);
   });
 });

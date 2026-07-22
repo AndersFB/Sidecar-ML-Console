@@ -7,21 +7,37 @@ import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
 
 export function TranscribePanel() {
-  const { config, status } = useConnection();
+  const { config, connectedConfig, status } = useConnection();
   const [audio, setAudio] = useState<Blob | null>(null);
   const [locale, setLocale] = usePersistentState('sidecar.transcribe.locale', 'en-US');
   const [installed, setInstalled] = useState<string[]>([]);
   const [result, setResult] = useState<TranscribeResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputKey, setInputKey] = useState(0);
+
+  const clear = () => {
+    setAudio(null);
+    setResult(null);
+    setError(null);
+    setInputKey((key) => key + 1);
+  };
 
   useEffect(() => {
-    if (status !== 'online') return;
+    if (status !== 'online' || !connectedConfig) return;
+    let cancelled = false;
     api
-      .transcribeLocales(config)
-      .then((locales) => setInstalled(locales.installed))
-      .catch(() => setInstalled([]));
-  }, [config, status]);
+      .transcribeLocales(connectedConfig)
+      .then((locales) => {
+        if (!cancelled) setInstalled(locales.installed);
+      })
+      .catch(() => {
+        if (!cancelled) setInstalled([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [connectedConfig, status]);
 
   const run = async () => {
     if (!audio) return;
@@ -38,7 +54,7 @@ export function TranscribePanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <AudioInput onAudio={(blob) => { setAudio(blob); setResult(null); }} />
+      <AudioInput key={inputKey} onAudio={(blob) => { setAudio(blob); setResult(null); }} />
       <div className="flex items-center gap-3">
         <input
           className={`${inputClass} w-28`}
@@ -47,6 +63,9 @@ export function TranscribePanel() {
           aria-label="Locale"
         />
         <Button onClick={() => void run()} disabled={!audio || busy}>Transcribe</Button>
+        <Button variant="ghost" onClick={clear} disabled={busy || (!audio && !result && !error)}>
+          Clear
+        </Button>
         {busy && <Spinner label="Transcribing on-device…" />}
       </div>
       {installed.length > 0 && (

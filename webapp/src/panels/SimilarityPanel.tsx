@@ -12,6 +12,15 @@ export function SimilarityPanel() {
   const [result, setResult] = useState<SimilarityResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputKey, setInputKey] = useState(0);
+
+  const clear = () => {
+    setImageA(null);
+    setImageB(null);
+    setResult(null);
+    setError(null);
+    setInputKey((key) => key + 1);
+  };
 
   const run = async () => {
     if (!imageA || !imageB) return;
@@ -33,11 +42,26 @@ export function SimilarityPanel() {
         and photo de-duplication. Lower distance = more similar.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <ImageDropzone label="Image A" onPick={(picked) => { setImageA(picked); setResult(null); }} />
-        <ImageDropzone label="Image B" onPick={(picked) => { setImageB(picked); setResult(null); }} />
+        <ImageDropzone
+          key={`a-${inputKey}`}
+          label="Image A"
+          onPick={(picked) => { setImageA(picked); setResult(null); }}
+        />
+        <ImageDropzone
+          key={`b-${inputKey}`}
+          label="Image B"
+          onPick={(picked) => { setImageB(picked); setResult(null); }}
+        />
       </div>
       <div className="flex items-center gap-3">
         <Button onClick={() => void run()} disabled={!imageA || !imageB || busy}>Compare</Button>
+        <Button
+          variant="ghost"
+          onClick={clear}
+          disabled={busy || (!imageA && !imageB && !result && !error)}
+        >
+          Clear
+        </Button>
         {busy && <Spinner />}
       </div>
       {error && <ErrorBanner message={error} />}

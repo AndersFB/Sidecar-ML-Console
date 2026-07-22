@@ -1,5 +1,5 @@
 import { HttpResponse, http } from 'msw';
-import type { Capability, Health, OcrResponse } from '../../api/types';
+import type { Capability, FacesResponse, Health, OcrResponse } from '../../api/types';
 
 export const BASE = 'http://phone.test:8080';
 
@@ -53,10 +53,35 @@ export const ocrFixture: OcrResponse = {
   ],
 };
 
+export const facesFixture: FacesResponse = {
+  image: { width: 800, height: 600 },
+  faces: [
+    {
+      box_px: { x: 120, y: 90, width: 200, height: 240 },
+      roll_deg: 10,
+      yaw_deg: -4.1,
+      pitch_deg: 0.9,
+      landmarks: {
+        left_eye: [
+          { x: 170, y: 180 },
+          { x: 185, y: 178 },
+        ],
+        right_eye: [
+          { x: 250, y: 180 },
+          { x: 265, y: 178 },
+        ],
+      },
+    },
+  ],
+};
+
 export const handlers = [
   http.get(`${BASE}/health`, () => HttpResponse.json(healthFixture)),
   http.get(`${BASE}/v1/capabilities`, () => HttpResponse.json(capabilitiesFixture)),
   http.post(`${BASE}/v1/vision/ocr`, () => HttpResponse.json(ocrFixture)),
+  http.post(`${BASE}/v1/vision/faces`, () => HttpResponse.json(facesFixture)),
+  http.get(`${BASE}/v1/images/styles`, () => HttpResponse.json({ styles: [] })),
+  http.get(`${BASE}/v1/speech/voices`, () => HttpResponse.json({ voices: [] })),
   http.post(`${BASE}/v1/chat/completions`, () =>
     HttpResponse.json({
       id: 'chatcmpl-test',

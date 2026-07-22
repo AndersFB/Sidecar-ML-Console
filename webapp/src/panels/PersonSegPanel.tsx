@@ -12,6 +12,14 @@ export function PersonSegPanel() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputKey, setInputKey] = useState(0);
+
+  const clear = () => {
+    setImage(null);
+    setResultUrl(null);
+    setError(null);
+    setInputKey((key) => key + 1);
+  };
 
   const run = async () => {
     if (!image) return;
@@ -29,7 +37,7 @@ export function PersonSegPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone onPick={(picked) => { setImage(picked); setResultUrl(null); }} />
+      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResultUrl(null); }} />
       <div className="flex items-center gap-3">
         <select
           value={quality}
@@ -41,6 +49,9 @@ export function PersonSegPanel() {
           <option value="accurate">Accurate</option>
         </select>
         <Button onClick={() => void run()} disabled={!image || busy}>Segment people</Button>
+        <Button variant="ghost" onClick={clear} disabled={busy || (!image && !resultUrl && !error)}>
+          Clear
+        </Button>
         {busy && <Spinner />}
       </div>
       {error && <ErrorBanner message={error} />}

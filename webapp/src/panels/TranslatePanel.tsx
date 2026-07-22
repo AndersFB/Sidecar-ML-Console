@@ -5,8 +5,8 @@ import { useConnection } from '../state/ConnectionContext';
 import { usePersistentState } from '../utils/usePersistentState';
 
 export function TranslatePanel() {
-  const { config, status } = useConnection();
-  const [text, setText] = useState('');
+  const { config, connectedConfig, status } = useConnection();
+  const [text, setText] = usePersistentState('sidecar.translate.text', '');
   const [languages, setLanguages] = useState<string[]>([]);
   const [source, setSource] = usePersistentState('sidecar.translate.source', 'en');
   const [target, setTarget] = usePersistentState('sidecar.translate.target', 'de');
@@ -15,12 +15,26 @@ export function TranslatePanel() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status !== 'online') return;
+    if (status !== 'online' || !connectedConfig) return;
+    let cancelled = false;
     api
-      .translationLanguages(config)
-      .then((response) => setLanguages(response.languages))
-      .catch(() => setLanguages([]));
-  }, [config, status]);
+      .translationLanguages(connectedConfig)
+      .then((response) => {
+        if (!cancelled) setLanguages(response.languages);
+      })
+      .catch(() => {
+        if (!cancelled) setLanguages([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [connectedConfig, status]);
+
+  const clear = () => {
+    setText('');
+    setResult(null);
+    setError(null);
+  };
 
   const run = async () => {
     if (!text.trim()) return;
@@ -72,6 +86,13 @@ export function TranslatePanel() {
           ))}
         </select>
         <Button onClick={() => void run()} disabled={busy || !text.trim()}>Translate</Button>
+        <Button
+          variant="ghost"
+          onClick={clear}
+          disabled={busy || (!text && result === null && !error)}
+        >
+          Clear
+        </Button>
         {busy && <Spinner />}
       </div>
       <p className="text-xs text-ink-3">

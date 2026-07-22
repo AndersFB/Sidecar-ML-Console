@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import type { OcrResponse } from '../api/types';
 import { ImageDropzone, type PickedImage } from '../components/ImageDropzone';
@@ -12,26 +12,39 @@ export function OcrPanel() {
   const [result, setResult] = useState<OcrResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputKey, setInputKey] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const clear = () => {
+    setImage(null);
+    setResult(null);
+    setError(null);
+    setInputKey((key) => key + 1);
+  };
+
+  // The canvas only mounts once `result` renders, so drawing must happen here.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !result || !image) return;
+    const element = new Image();
+    element.onload = () =>
+      drawImageWithBoxes(
+        canvas,
+        element,
+        result.lines.map((line) => ({ box: line.box_px, label: line.text })),
+      );
+    element.src = image.previewUrl;
+    return () => {
+      element.onload = null;
+    };
+  }, [result, image]);
 
   const run = async () => {
     if (!image) return;
     setBusy(true);
     setError(null);
     try {
-      const response = await api.ocr(config, image.file);
-      setResult(response);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const element = new Image();
-        element.onload = () =>
-          drawImageWithBoxes(
-            canvas,
-            element,
-            response.lines.map((line) => ({ box: line.box_px, label: line.text })),
-          );
-        element.src = image.previewUrl;
-      }
+      setResult(await api.ocr(config, image.file));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -41,9 +54,12 @@ export function OcrPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone onPick={(picked) => { setImage(picked); setResult(null); }} />
+      <ImageDropzone key={inputKey} onPick={(picked) => { setImage(picked); setResult(null); }} />
       <div className="flex items-center gap-3">
         <Button onClick={() => void run()} disabled={!image || busy}>Read text</Button>
+        <Button variant="ghost" onClick={clear} disabled={busy || (!image && !result && !error)}>
+          Clear
+        </Button>
         {busy && <Spinner label="Recognizing…" />}
       </div>
       {error && <ErrorBanner message={error} />}

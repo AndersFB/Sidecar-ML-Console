@@ -41,8 +41,10 @@ export function ChatPanel() {
           { messages: outbound },
           (delta) => {
             setMessages((current) => {
+              // The user can clear the conversation mid-stream; drop late deltas.
+              const last = current[current.length - 1];
+              if (!last || last.role !== 'assistant') return current;
               const next = [...current];
-              const last = next[next.length - 1];
               next[next.length - 1] = { ...last, content: last.content + delta };
               return next;
             });
@@ -57,7 +59,11 @@ export function ChatPanel() {
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError')) {
         setError(err instanceof Error ? err.message : String(err));
-        setMessages(history);
+        // Roll back the failed exchange — unless the user cleared mid-stream.
+        setMessages((current) => {
+          const last = current[current.length - 1];
+          return last && last.role === 'assistant' ? history : current;
+        });
       }
     } finally {
       setBusy(false);

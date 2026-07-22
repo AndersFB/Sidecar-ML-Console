@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { Icon } from './components/Icon';
 import { SidecarLogo } from './components/SidecarLogo';
@@ -12,7 +12,13 @@ export default function App() {
   const [selectedId, setSelectedId] = usePersistentState('sidecar.panel', 'chat');
 
   const selected = PANELS.find((panel) => panel.id === selectedId) ?? PANELS[0];
-  const SelectedComponent = selected.component;
+  // Visited panels stay mounted (hidden) so their input/result survive switching.
+  const [visited, setVisited] = useState<string[]>(() => [selected.id]);
+
+  const selectPanel = (id: string) => {
+    setSelectedId(id);
+    setVisited((current) => (current.includes(id) ? current : [...current, id]));
+  };
 
   const capabilityById = useMemo(
     () => new Map(capabilities.map((capability) => [capability.id, capability])),
@@ -60,7 +66,7 @@ export default function App() {
                     <li key={panel.id} className="max-md:shrink-0">
                       <button
                         type="button"
-                        onClick={() => setSelectedId(panel.id)}
+                        onClick={() => selectPanel(panel.id)}
                         className={`flex w-full items-center gap-2.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
                           isSelected
                             ? 'bg-panel-2 text-ink'
@@ -119,7 +125,11 @@ export default function App() {
             <ErrorBanner message="Not connected — enter your iPhone's address (shown in the Sidecar ML app) and press Connect." />
           )}
 
-          <SelectedComponent key={selected.id} />
+          {PANELS.filter((panel) => visited.includes(panel.id)).map((panel) => (
+            <div key={panel.id} hidden={panel.id !== selected.id}>
+              <panel.component />
+            </div>
+          ))}
         </div>
       </main>
     </div>
