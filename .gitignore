@@ -5,6 +5,7 @@ Sidecar ML/
 node_modules/
 dist/
 coverage/
+tsconfig.tsbuildinfo
 
 # Python
 .venv/
