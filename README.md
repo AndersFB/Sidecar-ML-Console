@@ -8,9 +8,7 @@ speech-to-text, text-to-speech, offline translation, NLP, sound classification,
 Shazam — and the Apple Intelligence LLM behind an **OpenAI-compatible**
 `/v1/chat/completions` endpoint.
 
-<!-- TODO: replace id000000000 with the real App Store id once the app is live -->
-> **Get the app:** [Download Sidecar ML on the App Store](https://apps.apple.com/app/id000000000)
-> *(listing coming soon)*
+> **Get the app:** [Download Sidecar ML on the App Store](https://apps.apple.com/app/id6793297547)
 
 ```
 ┌─ iPhone: "Sidecar ML" app ────────────────────────────┐
@@ -30,7 +28,7 @@ Shazam — and the Apple Intelligence LLM behind an **OpenAI-compatible**
 
 ## Quickstart
 
-**1. Run the app** — [install Sidecar ML from the App Store](https://apps.apple.com/app/id000000000),
+**1. Run the app** — [install Sidecar ML from the App Store](https://apps.apple.com/app/id6793297547),
 open it and tap **Start Server**. The dashboard shows the URL
 (e.g. `http://192.168.1.20:8080`) plus a QR code. Keep the app in the
 foreground — iOS suspends network servers in the background (there's a
