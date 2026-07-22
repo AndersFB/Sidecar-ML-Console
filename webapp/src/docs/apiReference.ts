@@ -326,7 +326,7 @@ export const API_REFERENCE: EndpointGroup[] = [
           { name: 'source', note: 'optional — auto-detected when omitted' },
           { name: 'target', note: 'required' },
         ],
-        response: '{ "translations": [{ "text": "Guten Morgen", "detected_source": "en" }] }',
+        response: '{ "translations": [{ "text": "Guten Morgen" }] }',
         curl:
           'curl {{BASE}}/v1/translation/translate -H \'Content-Type: application/json\' -d \'{\n  "text": "Good morning", "target": "de"\n}\'',
         python: 'phone.translate("Good morning", target="de")',

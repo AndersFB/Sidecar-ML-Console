@@ -48,14 +48,15 @@ curl http://PHONE:8080/v1/translation/translate -H 'Content-Type: application/js
 ```json
 {
   "translations": [
-    { "detected_source": "en", "text": "Guten Morgen" },
-    { "detected_source": "en", "text": "Bis heute Abend" }
+    { "text": "Guten Morgen" },
+    { "text": "Bis heute Abend" }
   ]
 }
 ```
 
-`translations` preserves input order. `detected_source` appears when the
-source language was auto-detected (i.e. `source` was omitted).
+`translations` preserves input order. Each item carries the translated
+`text`. (A `detected_source` field is defined in the schema for reporting
+auto-detected source languages, but current builds do not populate it.)
 
 Errors:
 
