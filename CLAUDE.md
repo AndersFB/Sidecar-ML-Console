@@ -19,7 +19,7 @@ the HTTP API reference. The phone speaks REST + SSE over `http://<phone-ip>:8080
 - `docs/API.md` — API conventions + endpoint index; the per-area reference
   pages live in `docs/api/*.md`.
 
-## Console (`webapp/webapp/`)
+## Console (`webapp/`)
 
 Stack: React 19, Vite 7, Tailwind 4, TypeScript ~5.8; tests via Vitest +
 Testing Library + MSW.
@@ -69,7 +69,7 @@ npm run release      # build, then publish the single file as a GitHub release a
 When the server gains/changes an endpoint, update all five in lockstep:
 
 1. `docs/API.md` + the per-area pages in `docs/api/`
-2. the in-app API Reference — `webapp/webapp/src/docs/apiReference.ts` +
+2. the in-app API Reference — `webapp/src/docs/apiReference.ts` +
    `ApiDocsPanel.tsx`
 3. the Python client — `examples/python/.../client.py` (one wrapper per route)
 4. a matching `demo.py` command

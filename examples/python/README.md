@@ -27,7 +27,8 @@ SIDECAR_URL=http://<phone-ip>:8080 uvicorn fastapi_proxy:app --reload
 open http://127.0.0.1:8000/docs
 ```
 
-The chat endpoint is OpenAI-compatible, so the official SDK also works directly:
+The chat endpoint is OpenAI-compatible, so the official SDK also works directly
+(`pip install openai` — it's not in `requirements.txt`):
 
 ```python
 from openai import OpenAI

@@ -56,6 +56,7 @@ cd webapp && npm install && npm run dev
 **4. Python / OpenAI SDK:** see [`examples/python/`](examples/python/).
 
 ```python
+# pip install openai
 from openai import OpenAI
 phone = OpenAI(base_url="http://192.168.1.20:8080/v1", api_key="unused")
 ```

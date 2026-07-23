@@ -14,8 +14,8 @@ The per-endpoint reference is split by area under [`docs/api/`](api/):
 
 | Endpoint | Purpose |
 |---|---|
-| [`GET /`](api/server.md#get-) | Service info (app, version) |
-| [`GET /health`](api/server.md#get-health) | Liveness probe with uptime |
+| [`GET /`](api/server.md#get--no-auth) | Service info (app, version) |
+| [`GET /health`](api/server.md#get-health-no-auth) | Liveness probe with uptime |
 | [`GET /v1/capabilities`](api/server.md#get-v1capabilities) | Live capability discovery — what *this* phone can do |
 | [`GET /v1/models`](api/chat.md#get-v1models) | OpenAI model list |
 | [`POST /v1/chat/completions`](api/chat.md#post-v1chatcompletions) | OpenAI-compatible chat (SSE streaming, JSON-schema output) |
