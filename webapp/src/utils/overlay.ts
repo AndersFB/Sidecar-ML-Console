@@ -1,4 +1,4 @@
-import type { Box, Joint, Point } from '../api/types';
+import type { Box, Face, ImageSize, Joint, Point } from '../api/types';
 
 const STROKE = '#22d3ee';
 const FILL = 'rgba(34, 211, 238, 0.12)';
@@ -26,17 +26,13 @@ function prepareCanvas(
   return { ctx, s };
 }
 
-/** Draws the source image and labeled boxes onto a canvas (pixel space). */
-export function drawImageWithBoxes(
-  canvas: HTMLCanvasElement,
-  image: HTMLImageElement,
+function paintBoxes(
+  ctx: CanvasRenderingContext2D,
+  canvasWidth: number,
+  s: number,
   boxes: { box: Box; label?: string }[],
 ): void {
-  const prepared = prepareCanvas(canvas, image);
-  if (!prepared) return;
-  const { ctx, s } = prepared;
-
-  const scale = Math.max(1, canvas.width / 600);
+  const scale = Math.max(1, canvasWidth / 600);
   ctx.lineWidth = 2 * scale;
   ctx.font = `${12 * scale}px ui-monospace, monospace`;
 
@@ -58,16 +54,13 @@ export function drawImageWithBoxes(
   }
 }
 
-export function drawImageWithPoints(
-  canvas: HTMLCanvasElement,
-  image: HTMLImageElement,
+function paintPoints(
+  ctx: CanvasRenderingContext2D,
+  canvasWidth: number,
+  s: number,
   pointGroups: Point[][],
 ): void {
-  const prepared = prepareCanvas(canvas, image);
-  if (!prepared) return;
-  const { ctx, s } = prepared;
-
-  const radius = Math.max(2, canvas.width / 300);
+  const radius = Math.max(2, canvasWidth / 300);
   for (const points of pointGroups) {
     ctx.fillStyle = STROKE;
     for (const point of points) {
@@ -93,16 +86,13 @@ const BODY_EDGES: [string, string][] = [
   ['right_knee', 'right_ankle'],
 ];
 
-export function drawSkeletons(
-  canvas: HTMLCanvasElement,
-  image: HTMLImageElement,
+function paintSkeletons(
+  ctx: CanvasRenderingContext2D,
+  canvasWidth: number,
+  s: number,
   persons: { joints: Record<string, Joint> }[],
 ): void {
-  const prepared = prepareCanvas(canvas, image);
-  if (!prepared) return;
-  const { ctx, s } = prepared;
-
-  const scale = Math.max(1, canvas.width / 600);
+  const scale = Math.max(1, canvasWidth / 600);
 
   for (const person of persons) {
     ctx.strokeStyle = STROKE;
@@ -125,5 +115,73 @@ export function drawSkeletons(
         ctx.fill();
       }
     }
+  }
+}
+
+/** Draws the source image and labeled boxes onto a canvas (pixel space). */
+export function drawImageWithBoxes(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement,
+  boxes: { box: Box; label?: string }[],
+): void {
+  const prepared = prepareCanvas(canvas, image);
+  if (!prepared) return;
+  paintBoxes(prepared.ctx, canvas.width, prepared.s, boxes);
+}
+
+export function drawImageWithPoints(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement,
+  pointGroups: Point[][],
+): void {
+  const prepared = prepareCanvas(canvas, image);
+  if (!prepared) return;
+  paintPoints(prepared.ctx, canvas.width, prepared.s, pointGroups);
+}
+
+export function drawSkeletons(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement,
+  persons: { joints: Record<string, Joint> }[],
+): void {
+  const prepared = prepareCanvas(canvas, image);
+  if (!prepared) return;
+  paintSkeletons(prepared.ctx, canvas.width, prepared.s, persons);
+}
+
+// MARK: Live camera
+
+export type LiveMode = 'faces' | 'body' | 'hands';
+
+/** Latest detections from the phone, in the pixel space of the frame sent. */
+export interface LiveDetections {
+  mode: LiveMode;
+  /** Size the server analyzed — the dimensions of the frame that was posted. */
+  frame: ImageSize;
+  faces?: Face[];
+  persons?: { joints: Record<string, Joint> }[];
+  hands?: { chirality?: string; joints: Record<string, Joint> }[];
+}
+
+/**
+ * Draws detections onto a transparent canvas layered over the live `<video>`
+ * preview. The canvas backing store is sized to the analyzed frame, so server
+ * pixel coordinates apply 1:1 and CSS scales the layer with the video.
+ */
+export function drawLiveOverlay(canvas: HTMLCanvasElement, detections: LiveDetections): void {
+  const { width, height } = detections.frame;
+  if (canvas.width !== width) canvas.width = Math.max(1, width);
+  if (canvas.height !== height) canvas.height = Math.max(1, height);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (detections.mode === 'faces' && detections.faces) {
+    paintBoxes(ctx, canvas.width, 1, detections.faces.map((face) => ({ box: face.box_px })));
+    paintPoints(ctx, canvas.width, 1, detections.faces.flatMap((face) => Object.values(face.landmarks)));
+  } else if (detections.mode === 'body' && detections.persons) {
+    paintSkeletons(ctx, canvas.width, 1, detections.persons);
+  } else if (detections.mode === 'hands' && detections.hands) {
+    paintPoints(ctx, canvas.width, 1, detections.hands.map((hand) => Object.values(hand.joints)));
   }
 }

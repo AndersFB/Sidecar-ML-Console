@@ -130,6 +130,12 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="m21 15-5-5L5 21" />
     </>
   ),
+  video: (
+    <>
+      <rect x="2" y="6" width="14" height="12" rx="2" />
+      <path d="m22 8-6 4 6 4z" />
+    </>
+  ),
   book: (
     <>
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />

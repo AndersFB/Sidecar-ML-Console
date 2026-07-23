@@ -18,6 +18,25 @@ before analysis (they return no coordinates); every endpoint that returns
 coordinates analyzes at full resolution. Two vision requests run concurrently;
 further requests queue.
 
+### Live video
+
+There is no dedicated streaming endpoint — live clients stream by posting
+frames to the one-shot endpoints in a loop. The pattern that works well (and
+is what the web console's **Live camera** mode on the Faces and Pose panels
+does):
+
+- Capture at ≤720p and encode each frame as JPEG (~0.7 quality). Coordinates
+  come back in the pixel space of the frame you sent, ready to draw over the
+  preview.
+- Keep **exactly one request in flight** and drop frames while waiting. The
+  phone runs two vision requests concurrently, shared across all clients — a
+  backlog adds latency, never throughput. The loop then self-paces to
+  whatever the phone sustains.
+- Treat `429 busy` and timeouts as transient: skip the frame, keep going.
+
+Each frame is an ordinary request, so a streaming client shows up
+request-by-request in the app's live request log.
+
 ### `POST /v1/vision/ocr`
 
 Recognizes printed and handwritten text, with a bounding box and confidence

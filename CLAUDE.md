@@ -41,6 +41,12 @@ npm run release      # build, then publish the single file as a GitHub release a
   `PanelDef.capabilityId` is optional — non-capability panels (e.g. the API
   Reference) omit it. Panels grey out when the phone reports the capability
   unavailable, showing the phone's reason.
+- **Live camera.** The Faces and Pose panels share
+  `src/components/LiveCameraView.tsx`: webcam → JPEG frame → the existing
+  one-shot vision endpoints, exactly one request in flight (drop-while-busy),
+  newest detections drawn over the `<video>` preview via `drawLiveOverlay`
+  in `src/utils/overlay.ts`. There is no dedicated streaming endpoint, so
+  the 5-way API-docs sync is not in play for it.
 - **Single-file console.** `npm run build` also emits a self-contained
   `dist/sidecar-ml-console.html` (CSS, JS, favicon, and the mic worklet all
   inlined — the worklet via `?raw` + a Blob URL so it runs from `file://`).
