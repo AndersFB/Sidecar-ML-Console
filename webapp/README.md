@@ -44,5 +44,12 @@ Notes:
   would block requests to the phone's `http://` address as mixed content.
 - Microphone capture is encoded to WAV in the browser (the server can't decode
   webm/opus). `getUserMedia` needs a secure context, which `localhost` is.
+- Every image panel can **take a photo with the computer's camera** — the
+  camera button in the corner of the image dropzone opens a viewfinder, and
+  the shot flows through the same pipeline as an uploaded file.
+- The Faces and Pose panels additionally have a **Live camera** mode: webcam
+  frames stream to the phone one at a time (JPEG, one request in flight) and
+  detections are drawn over the live preview. Like the microphone, the camera
+  needs a secure context — `http://localhost` or the downloaded single file.
 - If auth is enabled on the phone, paste the bearer token via the "token" toggle
   in the sidebar.

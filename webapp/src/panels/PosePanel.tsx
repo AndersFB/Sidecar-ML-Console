@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import type { BodyPoseResponse, HandPoseResponse } from '../api/types';
 import { ImageDropzone, revivePickedImage, type PickedImage } from '../components/ImageDropzone';
+import { Icon } from '../components/Icon';
+import { LiveCameraView } from '../components/LiveCameraView';
 import { Button, Card, ErrorBanner, Spinner } from '../components/Primitives';
 import { useConnection } from '../state/ConnectionContext';
 import { drawImageWithPoints, drawSkeletons } from '../utils/overlay';
@@ -22,6 +24,7 @@ export function PosePanel() {
   const [mode, setMode] = usePersistentState<'body' | 'hand'>('sidecar.pose.mode', 'body');
   const [result, setResult] = useStoredState<PoseResult | null>('sidecar.pose.result', null);
   const [busy, setBusy] = useState(false);
+  const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -31,6 +34,11 @@ export function PosePanel() {
     setResult(null);
     setError(null);
     setInputKey((key) => key + 1);
+  };
+
+  const toggleLive = () => {
+    setError(null);
+    setLive((value) => !value);
   };
 
   // The canvas only mounts once `result` renders, so drawing must happen here.
@@ -53,7 +61,7 @@ export function PosePanel() {
     return () => {
       element.onload = null;
     };
-  }, [result, image]);
+  }, [result, image, live]);
 
   const run = async () => {
     if (!image) return;
@@ -83,11 +91,22 @@ export function PosePanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <ImageDropzone
-        key={inputKey}
-        preview={image?.previewUrl ?? null}
-        onPick={(picked) => { setImage(picked); setResult(null); }}
-      />
+      {live ? (
+        <LiveCameraView
+          mode={mode === 'body' ? 'body' : 'hands'}
+          onClose={() => setLive(false)}
+          onError={(message) => {
+            setError(message);
+            setLive(false);
+          }}
+        />
+      ) : (
+        <ImageDropzone
+          key={inputKey}
+          preview={image?.previewUrl ?? null}
+          onPick={(picked) => { setImage(picked); setResult(null); }}
+        />
+      )}
       <div className="flex items-center gap-3">
         <select
           value={mode}
@@ -97,15 +116,28 @@ export function PosePanel() {
           <option value="body">Body skeleton</option>
           <option value="hand">Hand joints</option>
         </select>
-        <Button onClick={() => void run()} disabled={!image || busy}>Detect pose</Button>
-        <Button variant="ghost" onClick={clear} disabled={busy || (!image && !result && !error)}>
-          Clear
+        {!live && (
+          <Button onClick={() => void run()} disabled={!image || busy}>Detect pose</Button>
+        )}
+        <Button variant={live ? 'danger' : 'ghost'} onClick={toggleLive} disabled={busy}>
+          {live ? (
+            '■ Stop live camera'
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <Icon name="video" size={15} /> Live camera
+            </span>
+          )}
         </Button>
+        {!live && (
+          <Button variant="ghost" onClick={clear} disabled={busy || (!image && !result && !error)}>
+            Clear
+          </Button>
+        )}
         {busy && <Spinner />}
       </div>
       {error && <ErrorBanner message={error} />}
 
-      {summary && (
+      {!live && summary && (
         <Card title={summary}>
           <canvas ref={canvasRef} className="w-full rounded-lg" />
         </Card>

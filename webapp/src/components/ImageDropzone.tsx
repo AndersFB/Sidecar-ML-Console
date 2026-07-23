@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
+import { CameraCapture } from './CameraCapture';
 import { Icon } from './Icon';
 
 export interface PickedImage {
@@ -26,6 +27,7 @@ export function ImageDropzone({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [internalPreview, setInternalPreview] = useState<string | null>(null);
   const preview = previewProp !== undefined ? previewProp : internalPreview;
   // Each object URL pins its file in memory until revoked.
@@ -74,36 +76,59 @@ export function ImageDropzone({
     [handleFile],
   );
 
-  return (
-    <button
-      type="button"
-      onClick={() => inputRef.current?.click()}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={onDrop}
-      className={`flex min-h-32 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-sm transition-colors ${
-        dragging ? 'border-cyan-a bg-cyan-a/10 text-cyan-a' : 'border-line text-ink-3 hover:border-cyan-a/50'
-      }`}
-    >
-      {preview ? (
-        <img src={preview} alt="Selected input" className="max-h-40 rounded-lg object-contain" />
-      ) : (
-        <>
-          <Icon name="image" size={28} className="text-ink-3" />
-          <span>{label}</span>
-        </>
-      )}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        hidden
-        data-testid="image-input"
-        onChange={(event) => handleFile(event.target.files?.[0])}
+  if (capturing) {
+    return (
+      <CameraCapture
+        onCapture={(photo) => {
+          setCapturing(false);
+          handleFile(photo);
+        }}
+        onCancel={() => setCapturing(false)}
       />
-    </button>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        className={`flex min-h-32 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-sm transition-colors ${
+          dragging ? 'border-cyan-a bg-cyan-a/10 text-cyan-a' : 'border-line text-ink-3 hover:border-cyan-a/50'
+        }`}
+      >
+        {preview ? (
+          <img src={preview} alt="Selected input" className="max-h-40 rounded-lg object-contain" />
+        ) : (
+          <>
+            <Icon name="image" size={28} className="text-ink-3" />
+            <span>{label}</span>
+          </>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          data-testid="image-input"
+          onChange={(event) => handleFile(event.target.files?.[0])}
+        />
+      </button>
+      <button
+        type="button"
+        onClick={() => setCapturing(true)}
+        title="Take a photo with the camera"
+        aria-label="Take a photo with the camera"
+        className="absolute right-2 top-2 rounded-lg border border-line bg-panel-2/80 p-1.5 text-ink-3 transition-colors hover:border-cyan-a/40 hover:text-cyan-a"
+      >
+        <Icon name="camera" size={16} />
+      </button>
+    </div>
   );
 }

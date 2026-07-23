@@ -144,6 +144,10 @@ Extra requests queue server-side rather than fail — allow generous client
 timeouts. Chat can additionally answer `429 busy` when the on-device model
 rate-limits itself.
 
+For continuous use — streaming camera frames to a vision endpoint — don't
+queue: keep one request in flight per client and drop stale frames. See
+[Live video](api/vision.md#live-video).
+
 ### CORS
 
 Fully open: `Access-Control-Allow-Origin: *`, including Chrome's Private

@@ -1,5 +1,12 @@
 import { HttpResponse, http } from 'msw';
-import type { Capability, FacesResponse, Health, OcrResponse } from '../../api/types';
+import type {
+  BodyPoseResponse,
+  Capability,
+  FacesResponse,
+  HandPoseResponse,
+  Health,
+  OcrResponse,
+} from '../../api/types';
 
 export const BASE = 'http://phone.test:8080';
 
@@ -75,11 +82,40 @@ export const facesFixture: FacesResponse = {
   ],
 };
 
+export const bodyPoseFixture: BodyPoseResponse = {
+  image: { width: 640, height: 480 },
+  persons: [
+    {
+      joints: {
+        left_shoulder: { x: 220, y: 180, confidence: 0.95 },
+        right_shoulder: { x: 420, y: 180, confidence: 0.93 },
+        left_hip: { x: 240, y: 340, confidence: 0.9 },
+        right_hip: { x: 400, y: 340, confidence: 0.88 },
+      },
+    },
+  ],
+};
+
+export const handPoseFixture: HandPoseResponse = {
+  image: { width: 640, height: 480 },
+  hands: [
+    {
+      chirality: 'right',
+      joints: {
+        VNHLKWRI: { x: 300, y: 400, confidence: 0.97 },
+        VNHLKTTIP: { x: 340, y: 300, confidence: 0.8 },
+      },
+    },
+  ],
+};
+
 export const handlers = [
   http.get(`${BASE}/health`, () => HttpResponse.json(healthFixture)),
   http.get(`${BASE}/v1/capabilities`, () => HttpResponse.json(capabilitiesFixture)),
   http.post(`${BASE}/v1/vision/ocr`, () => HttpResponse.json(ocrFixture)),
   http.post(`${BASE}/v1/vision/faces`, () => HttpResponse.json(facesFixture)),
+  http.post(`${BASE}/v1/vision/body-pose`, () => HttpResponse.json(bodyPoseFixture)),
+  http.post(`${BASE}/v1/vision/hand-pose`, () => HttpResponse.json(handPoseFixture)),
   http.get(`${BASE}/v1/images/styles`, () => HttpResponse.json({ styles: [] })),
   http.get(`${BASE}/v1/speech/voices`, () => HttpResponse.json({ voices: [] })),
   http.post(`${BASE}/v1/chat/completions`, () =>

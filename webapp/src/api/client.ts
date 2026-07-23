@@ -127,7 +127,12 @@ async function postJson<T>(config: ApiConfig, path: string, body: unknown): Prom
   return response.json();
 }
 
-async function postBinary<T>(config: ApiConfig, path: string, blob: Blob): Promise<T> {
+async function postBinary<T>(
+  config: ApiConfig,
+  path: string,
+  blob: Blob,
+  signal?: AbortSignal,
+): Promise<T> {
   const response = await request(
     config,
     path,
@@ -137,6 +142,7 @@ async function postBinary<T>(config: ApiConfig, path: string, blob: Blob): Promi
         'Content-Type': blob.type || 'application/octet-stream',
       }),
       body: blob,
+      signal,
     },
     formatBytes(blob.size),
   );
@@ -178,12 +184,14 @@ export const api = {
     postBinary<ImageEnvelope>(c, `/v1/vision/subject-mask?mode=${mode}`, image),
   personSegmentation: (c: ApiConfig, image: Blob, quality: string) =>
     postBinary<ImageEnvelope>(c, `/v1/vision/person-segmentation?quality=${quality}`, image),
-  faces: (c: ApiConfig, image: Blob) =>
-    postBinary<FacesResponse>(c, '/v1/vision/faces', image),
-  bodyPose: (c: ApiConfig, image: Blob) =>
-    postBinary<BodyPoseResponse>(c, '/v1/vision/body-pose', image),
-  handPose: (c: ApiConfig, image: Blob) =>
-    postBinary<HandPoseResponse>(c, '/v1/vision/hand-pose', image),
+  // The optional signal lets the live camera loop abort a frame that hangs
+  // (e.g. the phone went to sleep mid-request) instead of stalling forever.
+  faces: (c: ApiConfig, image: Blob, signal?: AbortSignal) =>
+    postBinary<FacesResponse>(c, '/v1/vision/faces', image, signal),
+  bodyPose: (c: ApiConfig, image: Blob, signal?: AbortSignal) =>
+    postBinary<BodyPoseResponse>(c, '/v1/vision/body-pose', image, signal),
+  handPose: (c: ApiConfig, image: Blob, signal?: AbortSignal) =>
+    postBinary<HandPoseResponse>(c, '/v1/vision/hand-pose', image, signal),
   document: (c: ApiConfig, image: Blob, format: 'png' | 'jpeg' = 'png') =>
     postBinary<DocumentResponse>(c, `/v1/vision/document?correct=true&format=${format}`, image),
 
