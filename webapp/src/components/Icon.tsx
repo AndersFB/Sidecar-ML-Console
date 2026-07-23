@@ -136,6 +136,12 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="m22 8-6 4 6 4z" />
     </>
   ),
+  camera: (
+    <>
+      <path d="M14.5 4h-5L7.5 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </>
+  ),
   book: (
     <>
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />

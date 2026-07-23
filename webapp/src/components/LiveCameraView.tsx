@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiError, type ApiConfig } from '../api/client';
 import { useConnection } from '../state/ConnectionContext';
 import { drawLiveOverlay, type LiveDetections, type LiveMode } from '../utils/overlay';
+import { useCamera } from '../utils/useCamera';
+import { useCloseWhenHidden } from '../utils/useCloseWhenHidden';
 
 /**
  * Longest edge of the frames posted to the phone. Matches the 720p capture
@@ -86,88 +88,29 @@ export function LiveCameraView({
 }) {
   const { config } = useConnection();
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const overlayRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const { videoRef, ready, error: cameraError, devices, deviceId, setDeviceId } = useCamera();
 
-  const [running, setRunning] = useState(false);
   const [detections, setDetections] = useState<LiveDetections | null>(null);
   const [fps, setFps] = useState(0);
   const [requestError, setRequestError] = useState<string | null>(null);
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [deviceId, setDeviceId] = useState('');
   const [mirror, setMirror] = useState(true);
 
-  // Effects must call the latest callbacks without restarting on re-renders.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  // The loop must call the latest callback without restarting on re-renders.
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
 
-  // Camera lifecycle: acquire on mount / device switch, release on cleanup.
+  useCloseWhenHidden(containerRef, onClose);
+
   useEffect(() => {
-    let disposed = false;
-    const video = videoRef.current;
-    void (async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        onErrorRef.current(
-          'Camera unavailable in this context (camera capture needs http://localhost or the downloaded console file)',
-        );
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }),
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        });
-        if (disposed) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (video) {
-          video.srcObject = stream;
-          try {
-            await video.play();
-          } catch {
-            // Muted inline video is exempt from autoplay blocking; a rejection
-            // here means the element went away mid-start.
-          }
-        }
-        if (disposed) return;
-        setRunning(true);
-        // Labels only populate after permission is granted, so enumerate now.
-        try {
-          const all = await navigator.mediaDevices.enumerateDevices();
-          if (!disposed) setDevices(all.filter((device) => device.kind === 'videoinput'));
-        } catch {
-          // Picker stays hidden; the default camera still works.
-        }
-      } catch (error) {
-        if (disposed) return;
-        onErrorRef.current(
-          error instanceof Error
-            ? `Camera unavailable: ${error.message} (camera capture needs http://localhost or the downloaded console file)`
-            : 'Camera unavailable',
-        );
-      }
-    })();
-    return () => {
-      disposed = true;
-      setRunning(false);
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      if (video) video.srcObject = null;
-    };
-  }, [deviceId]);
+    if (cameraError) onErrorRef.current(cameraError);
+  }, [cameraError]);
+
+  const overlayRef = useRef<HTMLCanvasElement>(null);
 
   // Inference loop: one frame in flight at a time; frames the camera produces
   // while the phone is busy are simply never captured (drop-while-busy).
   useEffect(() => {
-    if (!running) return;
+    if (!ready) return;
     let cancelled = false;
     let controller: AbortController | null = null;
     const capture = document.createElement('canvas');
@@ -246,7 +189,7 @@ export function LiveCameraView({
       cancelled = true;
       controller?.abort();
     };
-  }, [running, mode, config]);
+  }, [ready, mode, config, videoRef]);
 
   // Paint the newest detections onto the overlay layer.
   useEffect(() => {
@@ -266,18 +209,6 @@ export function LiveCameraView({
     setRequestError(null);
   }, [mode]);
 
-  // Visited panels stay mounted while hidden — without this, switching panels
-  // would leave the camera and the frame loop running invisibly.
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!element || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => !entry.isIntersecting)) onCloseRef.current();
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
   const flip = mirror ? '-scale-x-100' : '';
   const status = detections
     ? `${summarize(detections)}${fps > 0 ? ` · ${fps.toFixed(1)} fps` : ''}`
@@ -285,7 +216,7 @@ export function LiveCameraView({
 
   return (
     <div ref={containerRef} className="flex flex-col gap-2">
-      <div className="relative overflow-hidden rounded-xl border border-line bg-navy/60">
+      <div className="relative min-h-40 overflow-hidden rounded-xl border border-line bg-navy/60">
         <video
           ref={videoRef}
           autoPlay

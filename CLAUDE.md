@@ -47,6 +47,13 @@ npm run release      # build, then publish the single file as a GitHub release a
   newest detections drawn over the `<video>` preview via `drawLiveOverlay`
   in `src/utils/overlay.ts`. There is no dedicated streaming endpoint, so
   the 5-way API-docs sync is not in play for it.
+- **Camera capture.** Every `ImageDropzone` offers "take a photo" via
+  `src/components/CameraCapture.tsx`. Camera plumbing (stream lifecycle,
+  device picker, secure-context error) is shared with live mode through
+  `src/utils/useCamera.ts`, and both auto-stop when their panel hides via
+  `src/utils/useCloseWhenHidden.ts`. Photos are captured unmirrored even when
+  the preview is mirrored (mirrored stills would break OCR text and hand
+  chirality).
 - **Single-file console.** `npm run build` also emits a self-contained
   `dist/sidecar-ml-console.html` (CSS, JS, favicon, and the mic worklet all
   inlined — the worklet via `?raw` + a Blob URL so it runs from `file://`).
