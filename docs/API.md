@@ -164,5 +164,7 @@ phone directly — that is how the web console works.
   Swagger UI.
 - **OpenAI SDKs:** point `base_url` at `http://<phone-ip>:8080/v1` with any
   `api_key` — see [Chat](api/chat.md).
+- **MCP:** [`mcp/`](../mcp/) exposes every route as a tool for AI agents over
+  stdio or HTTP, with Bonjour discovery and capability gating.
 - **Web console:** the in-app API Reference panel documents the same routes
   interactively, with examples pre-filled for your phone's address.
