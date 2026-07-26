@@ -47,3 +47,7 @@ or `api_key="<token>"` with the OpenAI SDK.
 
 `client.py` logs every request through loguru; silence it from your own code
 with `from loguru import logger; logger.disable("client")`.
+
+Looking to give an **AI agent** access to the phone? See [`mcp/`](../../mcp/) —
+an MCP server exposing every route as a tool. It is a separate project root with
+its own `pyproject.toml` and venv, so `requirements.txt` here does not cover it.

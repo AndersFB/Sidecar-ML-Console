@@ -24,6 +24,7 @@ Shazam — and the Apple Intelligence LLM behind an **OpenAI-compatible**
 |---|---|
 | [`webapp/`](webapp/) | React + Vite web console with a panel for every capability, webcam photo capture and live face & pose detection, and a built-in API reference |
 | [`examples/python/`](examples/python/) | `httpx` client, CLI, FastAPI integration, Bonjour discovery |
+| [`mcp/`](mcp/) | MCP server — lets an AI agent use the phone's ML as tools |
 | [`docs/API.md`](docs/API.md) | Full HTTP API reference |
 
 ## Quickstart
@@ -60,6 +61,16 @@ cd webapp && npm install && npm run dev
 from openai import OpenAI
 phone = OpenAI(base_url="http://192.168.1.20:8080/v1", api_key="unused")
 ```
+
+**5. AI agents (MCP)** — give an assistant the phone's ML as tools. Run the
+server on a machine that can see the phone, then point your MCP client at it:
+
+```bash
+cd mcp && uv venv && uv pip install -e .
+SIDECAR_URL=http://192.168.1.20:8080 sidecar-ml-mcp
+```
+
+See [`mcp/`](mcp/) for client config and the tool list.
 
 ## Notes
 
