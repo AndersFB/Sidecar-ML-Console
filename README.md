@@ -72,6 +72,49 @@ SIDECAR_URL=http://192.168.1.20:8080 sidecar-ml-mcp
 
 See [`mcp/`](mcp/) for client config and the tool list.
 
+## Connecting without Wi-Fi (USB)
+
+No network to share? Plug the iPhone into the computer with its charging cable.
+The cable alone gives the computer no route to the phone, so pick one of the two
+setups below — both work with the phone's Wi-Fi switched off, and neither needs
+any change to the console or the examples.
+
+**Personal Hotspot over USB** — nothing extra to install on macOS. On the phone:
+Settings → Personal Hotspot → **Allow Others to Join**, then plug in and tap
+Trust. iOS brings up a USB Ethernet link (the Wi-Fi radio is not in the path)
+and the phone becomes the gateway at a fixed address:
+
+```bash
+curl http://172.20.10.1:8080/health
+```
+
+Use `http://172.20.10.1:8080` anywhere this repo asks for the phone's address.
+This needs a carrier plan that allows hotspot — a SIM-less iPhone often has no
+Personal Hotspot section at all. On macOS, drag **iPhone USB** below Wi-Fi under
+System Settings → Network → ⋯ → Set Service Order so the computer keeps its own
+internet route while still reaching the phone. Windows needs Apple's Mobile
+Device Ethernet driver (iTunes / Apple Devices app); Linux needs the `ipheth`
+module plus `usbmuxd`.
+
+**usbmuxd port forwarding** — no hotspot and no cellular plan required, at the
+cost of one extra tool. `usbmuxd` tunnels TCP over the cable to a paired device:
+
+```bash
+brew install libimobiledevice   # Linux: apt install usbmuxd libimobiledevice-utils
+iproxy 8080:8080                # older builds: iproxy 8080 8080
+curl http://127.0.0.1:8080/health
+```
+
+`http://127.0.0.1:8080` is already the default address for the console, the
+Python examples and the MCP server, so they all connect unconfigured while the
+forward is running.
+
+Either way, the app still has to be in the **foreground**, and the console must
+be served over `http://localhost` (never `https://`) — an https page would block
+plain-HTTP requests to the phone as mixed content. Bonjour discovery may not
+cross the USB link, so enter the address by hand rather than relying on
+[`discover.py`](examples/python/discover.py).
+
 ## Notes
 
 - **Availability is honest**: `GET /v1/capabilities` reports per-capability
