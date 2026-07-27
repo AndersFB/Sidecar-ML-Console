@@ -225,6 +225,91 @@ export const API_REFERENCE: EndpointGroup[] = [
     ],
   },
   {
+    title: 'Face effects',
+    note: 'Landmark-anchored reshaping, skin/colour adjustment, stylize filters and face swapping. Image in: raw body or JSON {"image_base64": "…"}. Needs CoreML-backed Vision, so this reports unavailable on the simulator.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/v1/face/presets',
+        summary: 'Preset table, style names and swap directions — the same data the app’s picker reads.',
+        response:
+          '{ "presets": [{ "id": "cartoon", "name": "Cartoon", "parameters": { … } }],\n  "styles": ["none", "comic", "crystallize", "pixellate", "posterize", "thermal", "xray", "noir", "bloom"],\n  "directions": ["source_into_target", "target_into_source"] }',
+        curl: 'curl {{BASE}}/v1/face/presets',
+        python: 'phone.face_presets()',
+      },
+      {
+        method: 'POST',
+        path: '/v1/face/transform',
+        summary:
+          'Reshape and restyle every face in a photo. Zero faces is a normal outcome — the image comes back untouched with "faces": 0.',
+        params: [
+          { name: 'preset', note: 'query or JSON — applied first; "parameters" replaces it, query fields override both' },
+          { name: 'eye_size / nose_width / mouth_size / chin_length / face_width / swirl', note: '−1…1, 0 is identity' },
+          { name: 'smoothing', note: '0…1' },
+          { name: 'warmth / brightness / saturation', note: '−1…1' },
+          { name: 'style / style_amount', note: 'see /v1/face/presets; amount 0…1' },
+          { name: 'mask_to_face', note: 'true (default) composites through a face-shaped mask so the background is untouched' },
+          { name: 'format', note: 'png (default) | jpeg' },
+        ],
+        response:
+          '{ "image": { "width": 1200, "height": 1600 }, "faces": 1,\n  "result": { "content_type": "image/png", "data_base64": "…", "width": 1200, "height": 1600 } }\n// Accept: image/png returns the raw bytes instead',
+        curl:
+          "curl '{{BASE}}/v1/face/transform?preset=cartoon' -H 'Content-Type: image/jpeg' \\\n     -H 'Accept: image/png' --data-binary @portrait.jpg -o cartoon.png",
+        python: 'phone.face_transform("portrait.jpg", preset="cartoon")',
+      },
+      {
+        method: 'POST',
+        path: '/v1/face/swap',
+        summary:
+          'Landmark-aligned composite of one face onto another. Warps existing pixels — not a generative swap, and it synthesizes no new identity.',
+        params: [
+          { name: 'source_image_base64', note: 'required' },
+          { name: 'target_image_base64', note: 'required' },
+          { name: 'parameters.direction', note: 'source_into_target (default) | target_into_source' },
+          { name: 'parameters.blend / feather / color_match', note: '0…1' },
+          { name: 'parameters.scale', note: '0.8…1.2' },
+          { name: 'parameters.offset_x / offset_y', note: '−0.3…0.3, in interocular distances' },
+          { name: 'format', note: 'png (default) | jpeg' },
+        ],
+        response:
+          '{ "image": { "width": 1024, "height": 1024 },\n  "result": { "content_type": "image/png", "data_base64": "…", "width": 1024, "height": 1024 },\n  "notes": ["Landmark-aligned composite: …", "Best results come from similar head pose, …"] }',
+        curl:
+          'curl {{BASE}}/v1/face/swap -H \'Content-Type: application/json\' -d \'{\n  "source_image_base64": "…", "target_image_base64": "…"\n}\'',
+        python: 'phone.face_swap("me.jpg", "target.jpg")',
+      },
+      {
+        method: 'GET',
+        path: '/v1/face/stream',
+        summary:
+          'WebSocket. Send JPEG frames as binary; transformed JPEGs come back. Text frames carry JSON control, so the effect retunes mid-stream without interrupting the video.',
+        params: [
+          { name: '{"type":"parameters","parameters":{…}}', note: 'retune the effect' },
+          { name: '{"type":"target","image_base64":"…"}', note: 'set the swap donor photo' },
+          { name: '{"type":"swap","parameters":{…}}', note: 'swap blend/feather/offset' },
+          { name: 'token', note: 'query fallback — a browser cannot set headers on a WebSocket handshake' },
+        ],
+        response:
+          '// server → client text frames\n{ "type": "ready", "session": "…" }\n{ "type": "error", "message": "Another client is already streaming face." }\n// one face stream at a time; 30s of silence closes it',
+        curl: 'websocat ws://<phone-ip>:8080/v1/face/stream',
+        python: '# see examples/python/live_stream.py',
+      },
+      {
+        method: 'GET',
+        path: '/v1/face/broadcast',
+        summary:
+          "The phone's own camera, transformed on-device, as MJPEG. Plays in a bare <img src>, VLC or ffplay.",
+        params: [
+          { name: 'preset', note: 'plus the same per-field query overrides as /v1/face/transform' },
+          { name: 'token', note: 'query fallback — <img src> cannot send headers' },
+        ],
+        response:
+          '// multipart/x-mixed-replace; boundary=sidecarmlframe\n// 503 when the app is not supplying capture',
+        curl: 'ffplay {{BASE}}/v1/face/broadcast',
+        python: 'phone.face_broadcast(preset="cartoon")',
+      },
+    ],
+  },
+  {
     title: 'Image generation',
     note: 'Image Playground on the phone — requires an Apple Intelligence-capable iPhone (otherwise 503).',
     endpoints: [
@@ -249,6 +334,22 @@ export const API_REFERENCE: EndpointGroup[] = [
         response: '{ "styles": ["animation", "illustration", "sketch"] }',
         curl: 'curl {{BASE}}/v1/images/styles',
         python: 'phone.image_styles()',
+      },
+      {
+        method: 'POST',
+        path: '/v1/images/stylize',
+        summary:
+          'Restyle a photo of a person — an illustrated or animated version of them. The generative counterpart to /v1/face/transform, which instead edits the real photograph.',
+        params: [
+          { name: 'image_base64', note: 'required' },
+          { name: 'prompt', note: 'optional text concept layered on top of the photo' },
+          { name: 'n', note: '1–4, default 1' },
+          { name: 'style', note: 'see /v1/images/styles' },
+        ],
+        response: '{ "created": 1730000000, "data": [{ "b64_json": "…" }] }',
+        curl:
+          'curl {{BASE}}/v1/images/stylize -H \'Content-Type: application/json\' -d \'{\n  "image_base64": "…", "style": "illustration"\n}\'',
+        python: 'phone.stylize_image("portrait.jpg", style="illustration")',
       },
     ],
   },
@@ -301,6 +402,111 @@ export const API_REFERENCE: EndpointGroup[] = [
         response: '{ "supported": ["en-US", "da-DK", …], "installed": ["en-US"] }',
         curl: 'curl {{BASE}}/v1/speech/transcribe/locales',
         python: 'phone.transcribe_locales()',
+      },
+    ],
+  },
+  {
+    title: 'Voice effects',
+    note: 'Pitch/timbre/character effects, acoustic matching against a reference clip, and re-speaking through a system voice. Plain DSP, so this capability is available on every device. Same audio containers as Speech.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/v1/voice/presets',
+        summary: 'Preset table plus the accepted distortion and reverb preset names.',
+        response:
+          '{ "presets": [{ "id": "giant", "name": "Giant", "parameters": { … } }],\n  "distortion_presets": ["multiDecimated1", …], "reverb_presets": ["smallRoom", …] }',
+        curl: 'curl {{BASE}}/v1/voice/presets',
+        python: 'phone.voice_presets()',
+      },
+      {
+        method: 'POST',
+        path: '/v1/voice/transform',
+        summary: 'Apply the voice changer to a clip. Returns a WAV envelope.',
+        params: [
+          { name: 'preset', note: 'query or JSON — applied first; "parameters" replaces it, query fields override both' },
+          { name: 'pitch_cents', note: '−2400…2400 (±1200 is an octave)' },
+          { name: 'rate', note: '0.5…2 — also changes the output duration' },
+          { name: 'brightness / throat', note: '−1…1 spectral tilt and mid-band emphasis' },
+          { name: 'distortion / reverb', note: '0…1 wet/dry, with distortion_preset / reverb_preset names' },
+          { name: 'gain_db', note: '−12…12' },
+        ],
+        response:
+          '{ "content_type": "audio/wav", "data_base64": "…", "duration_s": 3.2, "sample_rate": 44100 }\n// Accept: audio/wav returns the raw bytes instead',
+        curl:
+          "curl '{{BASE}}/v1/voice/transform?preset=giant' -H 'Content-Type: audio/wav' \\\n     -H 'Accept: audio/wav' --data-binary @clip.wav -o giant.wav",
+        python: 'phone.voice_transform("clip.wav", preset="giant")',
+      },
+      {
+        method: 'POST',
+        path: '/v1/voice/analyze',
+        summary: 'Acoustic profile of a clip — median F0, range, spectral centroid and voiced ratio.',
+        response:
+          '{ "median_f0_hz": 118.4, "f0_low_hz": 96.2, "f0_high_hz": 151.0,\n  "spectral_centroid_hz": 1840.5, "voiced_ratio": 0.62, "duration_s": 4.1, "sample_rate": 44100 }\n// voiced_ratio below 0.1 means the F0 estimate is not trustworthy',
+        curl:
+          "curl {{BASE}}/v1/voice/analyze -H 'Content-Type: audio/wav' --data-binary @clip.wav",
+        python: 'phone.voice_analyze("clip.wav")',
+      },
+      {
+        method: 'POST',
+        path: '/v1/voice/match',
+        summary:
+          'Profile two clips and derive the settings that move the source toward the target’s register and brightness. Matches pitch and timbre — this is not voice cloning.',
+        params: [
+          { name: 'source_audio_base64', note: 'required' },
+          { name: 'target_audio_base64', note: 'required' },
+          { name: 'transform', note: 'true also returns the source rendered with the derived settings' },
+        ],
+        response:
+          '{ "source": { … }, "target": { … },\n  "parameters": { "pitch_cents": 380, "brightness": 0.22, … },\n  "audio": { "content_type": "audio/wav", … }  // only when transform=true }',
+        curl:
+          'curl {{BASE}}/v1/voice/match -H \'Content-Type: application/json\' -d \'{\n  "source_audio_base64": "…", "target_audio_base64": "…", "transform": true\n}\'',
+        python: 'phone.voice_match("me.wav", "reference.wav", transform=True)',
+      },
+      {
+        method: 'POST',
+        path: '/v1/voice/respeak',
+        summary:
+          'Transcribe the clip and speak it back through a system voice — a genuinely different speaker, at the cost of the original prosody.',
+        params: [
+          { name: 'audio_base64', note: 'required' },
+          { name: 'voice', note: 'identifier or language from /v1/speech/voices' },
+          { name: 'locale', note: 'recognition locale; defaults to the transcriber’s own choice' },
+          { name: 'parameters', note: 'voice-changer effects applied after synthesis' },
+        ],
+        response:
+          '{ "content_type": "audio/wav", "data_base64": "…", "duration_s": 2.9,\n  "sample_rate": 22050, "text": "what the phone heard" }\n// Accept: audio/wav returns bytes only — the transcript is JSON-path-only',
+        curl:
+          'curl {{BASE}}/v1/voice/respeak -H \'Content-Type: application/json\' -d \'{\n  "audio_base64": "…", "voice": "com.apple.voice.compact.en-GB.Daniel"\n}\'',
+        python: 'phone.voice_respeak("clip.wav", voice="…")',
+      },
+      {
+        method: 'GET',
+        path: '/v1/voice/stream',
+        summary:
+          'WebSocket. Send raw PCM16 LE mono chunks as binary; transformed chunks come back. Text frames carry JSON control, so the effect retunes mid-stream without interrupting the audio.',
+        params: [
+          { name: '{"type":"format","sample_rate":48000}', note: 'send before the first audio frame — the default is 44100' },
+          { name: '{"type":"parameters","parameters":{…}}', note: 'retune the effect' },
+          { name: 'token', note: 'query fallback — a browser cannot set headers on a WebSocket handshake' },
+        ],
+        response:
+          '// server → client text frames\n{ "type": "ready", "session": "…" }\n{ "type": "error", "message": "Another client is already streaming voice." }\n// one voice stream at a time; 30s of silence closes it',
+        curl: 'websocat ws://<phone-ip>:8080/v1/voice/stream',
+        python: '# see examples/python/live_stream.py',
+      },
+      {
+        method: 'GET',
+        path: '/v1/voice/broadcast',
+        summary:
+          "The phone's own microphone, transformed on-device, as a streaming WAV. Plays in ffplay or VLC straight from the URL.",
+        params: [
+          { name: 'preset', note: 'plus the same per-field query overrides as /v1/voice/transform' },
+          { name: 'token', note: 'query fallback — <audio src> cannot send headers' },
+        ],
+        response:
+          '// audio/wav, sizes declared unknown and played until the socket closes\n// 503 when the app is not supplying capture',
+        curl: 'ffplay {{BASE}}/v1/voice/broadcast?preset=robot',
+        python: 'phone.voice_broadcast(preset="robot")',
       },
     ],
   },

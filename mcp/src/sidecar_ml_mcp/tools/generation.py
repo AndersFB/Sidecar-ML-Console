@@ -8,15 +8,45 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import Image
 
-from ..media import save_bytes
+from ..media import resolve_media, save_bytes
 from ..state import get_connection
 
 ROUTES = {
     "generate_image": "POST /v1/images/generations",
+    "stylize_photo": "POST /v1/images/stylize",
     "list_image_styles": "GET /v1/images/styles",
     "phone_chat": "POST /v1/chat/completions",
     "list_models": "GET /v1/models",
 }
+
+
+def _image_blocks(result: dict, save_path: str | None, meta: dict) -> list:
+    """Image content blocks plus a compact summary.
+
+    Shared by the text and photo paths, which return the identical
+    OpenAI-shaped `{"data": [{"b64_json": …}]}` envelope.
+    """
+    blocks: list = []
+    saved: list[str] = []
+    items = result.get("data", [])
+    for index, item in enumerate(items):
+        try:
+            data = base64.b64decode(item["b64_json"])
+        except (KeyError, ValueError) as exc:
+            raise ToolError(f"Malformed image in the response: {exc}") from exc
+        blocks.append(Image(data=data, format="png"))
+        if save_path:
+            target = save_path
+            if len(items) > 1:
+                stem, _, ext = save_path.rpartition(".")
+                target = f"{stem}-{index + 1}.{ext}" if stem else f"{save_path}-{index + 1}"
+            saved.append(save_bytes(data, target))
+    summary: dict = {"count": len(blocks)}
+    summary.update({key: value for key, value in meta.items() if value is not None})
+    if saved:
+        summary["saved_to"] = saved
+    blocks.append(summary)
+    return blocks
 
 
 def register(mcp: FastMCP) -> None:
@@ -44,28 +74,47 @@ def register(mcp: FastMCP) -> None:
         result = await phone.post_json(
             "/v1/images/generations", {"prompt": prompt, "n": n, "style": style}
         )
-        blocks: list = []
-        saved: list[str] = []
-        items = result.get("data", [])
-        for index, item in enumerate(items):
-            try:
-                data = base64.b64decode(item["b64_json"])
-            except (KeyError, ValueError) as exc:
-                raise ToolError(f"Malformed image in the response: {exc}") from exc
-            blocks.append(Image(data=data, format="png"))
-            if save_path:
-                target = save_path
-                if len(items) > 1:
-                    stem, _, ext = save_path.rpartition(".")
-                    target = f"{stem}-{index + 1}.{ext}" if stem else f"{save_path}-{index + 1}"
-                saved.append(save_bytes(data, target))
-        summary: dict = {"count": len(blocks), "prompt": prompt}
-        if style:
-            summary["style"] = style
-        if saved:
-            summary["saved_to"] = saved
-        blocks.append(summary)
-        return blocks
+        return _image_blocks(result, save_path, {"prompt": prompt, "style": style})
+
+    @mcp.tool(tags={"image-gen"}, output_schema=None)
+    async def stylize_photo(
+        image: str,
+        prompt: str | None = None,
+        n: int = 1,
+        style: str | None = None,
+        save_path: str | None = None,
+    ) -> list:
+        """Restyle a photo of a person — an illustrated or animated version of them.
+
+        Requires Apple Intelligence, and the app must be in the foreground.
+
+        This is the generative counterpart to transform_face: that tool edits
+        the real photograph with precise controls, this one hands the whole
+        image to a model. Photo-specific rejections live here — a face too
+        small, an unsupported input image, or a concept that needs a person in
+        frame all come back as errors naming the problem.
+
+        Args:
+            image: A local file path, an http(s) URL, or base64-encoded image data.
+            prompt: Optional text concept layered on top of the photo.
+            n: How many images to generate, 1-4.
+            style: A style from list_image_styles, e.g. "illustration".
+            save_path: Optional path to write the first image. With n > 1 the rest
+                get a numeric suffix.
+        """
+        phone = get_connection()
+        await phone.require(ROUTES["stylize_photo"])
+        data, _ = await resolve_media(image, "image")
+        result = await phone.post_json(
+            "/v1/images/stylize",
+            {
+                "image_base64": base64.b64encode(data).decode(),
+                "prompt": prompt,
+                "n": n,
+                "style": style,
+            },
+        )
+        return _image_blocks(result, save_path, {"prompt": prompt, "style": style})
 
     @mcp.tool(tags={"image-gen"}, annotations={"readOnlyHint": True})
     async def list_image_styles() -> dict:

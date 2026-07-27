@@ -49,8 +49,20 @@ npm run release      # build, then publish the single file as a GitHub release a
   `src/components/LiveCameraView.tsx`: webcam → JPEG frame → the existing
   one-shot vision endpoints, exactly one request in flight (drop-while-busy),
   newest detections drawn over the `<video>` preview via `drawLiveOverlay`
-  in `src/utils/overlay.ts`. There is no dedicated streaming endpoint, so
-  the 5-way API-docs sync is not in play for it.
+  in `src/utils/overlay.ts`. These use no streaming endpoint — they post
+  stills in a loop — so the 6-way API-docs sync is not in play for them.
+- **Live streaming.** The voice and face changers do have real streaming
+  routes, and `src/api/liveStream.ts` is the only client for them.
+  `LiveSocket` wraps the WebSocket ingest (`/v1/{voice,face}/stream`): binary
+  frames carry media (PCM16 via `src/utils/pcm.ts`, or JPEG), text frames
+  carry JSON control, so moving a slider retunes the effect **without**
+  reconnecting — hence `parameters` is deliberately absent from those
+  effects' dependency arrays. `streamUrl()` also serves the broadcast routes,
+  which the phone renders into a bare `<img>`/`<audio>`. All four accept the
+  token as `?token=` because a browser cannot set headers on a WebSocket
+  handshake or an `<img src>`; that is the *only* place the console puts a
+  token in a URL. Mic capture for streaming is `MicStreamer` in
+  `src/utils/recorder.ts` — the chunk-emitting sibling of `MicRecorder`.
 - **Camera capture.** Every `ImageDropzone` offers "take a photo" via
   `src/components/CameraCapture.tsx`. Camera plumbing (stream lifecycle,
   device picker, secure-context error) is shared with live mode through
@@ -81,9 +93,19 @@ When the server gains/changes an endpoint, update all six in lockstep:
 6. the MCP server — `mcp/src/sidecar_ml_mcp/tools/*.py` (one tool per route,
    plus its `ROUTES` entry)
 
-Two tripwires guard this: `src/test/ApiDocsPanel.test.tsx` hardcodes the route
-list and fails if `apiReference.ts` drifts, and
-`mcp/tests/test_route_coverage.py` does the same for the MCP tools.
+Three tripwires guard this: `webapp/src/test/ApiDocsPanel.test.tsx` hardcodes
+the route list and fails if `apiReference.ts` drifts,
+`mcp/tests/test_route_coverage.py` does the same for the MCP tools, and
+`mcp/tests/test_gating.py` pins the capability ids in `tests/fake_phone.py`
+against the table in `docs/api/server.md`. A new capability means touching all
+three.
+
+The one standing exception is the four streaming routes: they get no MCP tool
+(a minutes-long socket has no meaning in one tool call, and the phone allows
+one session per modality), and no FastAPI proxy route for the two WebSockets.
+Both exclusions are named and justified in code —
+`STREAMING_NOT_EXPOSED` in the coverage test, and the `fastapi_proxy.py`
+module docstring — rather than being silently skipped.
 
 ## Python examples (`examples/python/`)
 
@@ -103,7 +125,7 @@ capabilities deciding which tools are advertised.
 ```bash
 cd mcp               # its own project root
 uv venv && uv pip install -e ".[dev]"
-.venv/bin/pytest     # 76 tests, fully offline against tests/fake_phone.py
+.venv/bin/pytest     # 87 tests, fully offline against tests/fake_phone.py
 sidecar-ml-mcp                          # stdio
 sidecar-ml-mcp --transport http --port 8765
 ```

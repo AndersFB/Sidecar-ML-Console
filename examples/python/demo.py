@@ -19,8 +19,10 @@ Data goes to stdout; loguru status lines go to stderr (pipe-friendly).
 
 from __future__ import annotations
 
+import base64
 import json
 import sys
+import time
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -256,11 +258,177 @@ def image_gen(
         logger.success(f"saved {out}")
 
 
+@app.command(name="stylize")
+def stylize(
+    image: Path = IMAGE,
+    prompt: str | None = typer.Option(None, help="Optional concept to steer the result"),
+    out: Path = typer.Option(Path("stylized.png")),
+    style: str | None = typer.Option(None, help="animation | illustration | sketch"),
+) -> None:
+    """Restyle a photo of a person (needs Apple Intelligence)."""
+    with phone() as p:
+        out.write_bytes(p.stylize_image(image, prompt=prompt, style=style)[0])
+        logger.success(f"saved {out}")
+
+
 @app.command()
 def styles() -> None:
     """Image-generation styles available on the device."""
     with phone() as p:
         dump(p.image_styles())
+
+
+# ---------------------------------------------------------------- face effects
+
+
+@app.command(name="face-presets")
+def face_presets() -> None:
+    """Face-changer presets, style names and swap directions."""
+    with phone() as p:
+        dump(p.face_presets())
+
+
+@app.command(name="face-transform")
+def face_transform(
+    image: Path = IMAGE,
+    out: Path = typer.Option(Path("face.png")),
+    preset: str | None = typer.Option(None, help="e.g. cartoon, beauty, anonymize"),
+    format: str = typer.Option("png", help="png | jpeg"),
+) -> None:
+    """Reshape and restyle the faces in a photo."""
+    with phone() as p:
+        result = p.face_transform(image, out=out, preset=preset, format=format)
+        if result["faces"] == 0:
+            logger.warning("no face found — the image came back unchanged")
+        logger.success(f"saved {out} ({result['faces']} face(s))")
+
+
+@app.command(name="face-swap")
+def face_swap(
+    source: Path = IMAGE,
+    target: Path = IMAGE,
+    out: Path = typer.Option(Path("swap.png")),
+    direction: str = typer.Option(
+        "source_into_target", help="source_into_target | target_into_source"
+    ),
+) -> None:
+    """Landmark-aligned face composite — not a generative swap."""
+    with phone() as p:
+        result = p.face_swap(source, target, out=out, parameters={"direction": direction})
+        logger.success(f"saved {out}")
+        for note in result["notes"]:
+            logger.info(note)
+
+
+@app.command(name="face-broadcast")
+def face_broadcast(
+    out: Path = typer.Option(Path("camera.mjpeg")),
+    preset: str | None = typer.Option(None),
+    seconds: float = typer.Option(5.0, help="How long to record before stopping"),
+) -> None:
+    """Record the phone's own transformed camera (MJPEG). Ctrl-C also stops."""
+    started = time.monotonic()
+    with phone() as p:
+        params = {"preset": preset} if preset else {}
+        for _ in p.face_broadcast(out=out, **params):
+            if time.monotonic() - started >= seconds:
+                break
+    logger.success(f"saved {out}")
+
+
+# --------------------------------------------------------------- voice effects
+
+
+@app.command(name="voice-presets")
+def voice_presets() -> None:
+    """Voice-changer presets plus distortion and reverb preset names."""
+    with phone() as p:
+        dump(p.voice_presets())
+
+
+@app.command(name="voice-transform")
+def voice_transform(
+    audio: Path = AUDIO,
+    out: Path = typer.Option(Path("voice.wav")),
+    preset: str | None = typer.Option(None, help="e.g. giant, robot, chipmunk"),
+    pitch_cents: float | None = typer.Option(None, help="-2400…2400 (±1200 = an octave)"),
+) -> None:
+    """Apply the voice changer to a clip."""
+    parameters = {"pitch_cents": pitch_cents} if pitch_cents is not None else None
+    with phone() as p:
+        p.voice_transform(audio, out=out, preset=preset, parameters=parameters)
+        logger.success(f"saved {out}")
+
+
+@app.command(name="voice-analyze")
+def voice_analyze(audio: Path = AUDIO) -> None:
+    """Acoustic profile of a voice (median F0, range, brightness)."""
+    with phone() as p:
+        result = p.voice_analyze(audio)
+        dump(result)
+        if result["voiced_ratio"] < 0.1:
+            logger.warning("barely any voiced speech — the pitch estimate is unreliable")
+
+
+@app.command(name="voice-match")
+def voice_match(
+    source: Path = AUDIO,
+    target: Path = AUDIO,
+    out: Path | None = typer.Option(None, help="Also render the source with the settings"),
+) -> None:
+    """Derive the settings matching a reference voice. Not voice cloning."""
+    with phone() as p:
+        result = p.voice_match(source, target, transform=out is not None)
+        dump({k: result[k] for k in ("source", "target", "parameters")})
+        if out and result.get("audio"):
+            out.write_bytes(base64.b64decode(result["audio"]["data_base64"]))
+            logger.success(f"saved {out}")
+
+
+@app.command(name="respeak")
+def respeak(
+    audio: Path = AUDIO,
+    out: Path = typer.Option(Path("respoken.wav")),
+    voice: str | None = typer.Option(None, help="Identifier from `demo.py voices`"),
+    locale: str | None = typer.Option(None),
+) -> None:
+    """Transcribe a clip and speak it back through a system voice."""
+    with phone() as p:
+        result = p.voice_respeak(audio, out=out, voice=voice, locale=locale)
+        logger.success(f"saved {out}")
+        dump(result["text"])
+
+
+@app.command(name="voice-broadcast")
+def voice_broadcast(
+    out: Path = typer.Option(Path("mic.wav")),
+    preset: str | None = typer.Option(None),
+    seconds: float = typer.Option(5.0, help="How long to record before stopping"),
+) -> None:
+    """Record the phone's own transformed microphone (streaming WAV)."""
+    started = time.monotonic()
+    with phone() as p:
+        params = {"preset": preset} if preset else {}
+        for _ in p.voice_broadcast(out=out, **params):
+            if time.monotonic() - started >= seconds:
+                break
+    logger.success(f"saved {out}")
+
+
+@app.command(name="stream-url")
+def stream_url(
+    route: str = typer.Argument(..., help="voice/stream | face/stream | voice/broadcast | face/broadcast"),
+) -> None:
+    """Print a streaming URL with the token embedded — paste into ffplay, VLC or websocat.
+
+    The WebSocket ingest routes need the optional `websockets` package to drive
+    from Python; the broadcast routes are plain HTTP and play anywhere.
+    """
+    with phone() as p:
+        url = p.stream_url(f"/v1/{route}")
+        if route.endswith("/stream"):
+            url = url.replace("http://", "ws://", 1).replace("https://", "wss://", 1)
+        dump(url)
 
 
 # ------------------------------------------------------------------ text

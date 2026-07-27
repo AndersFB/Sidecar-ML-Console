@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
-from . import audio, generation, server_tools, speech, text, vision
+from . import audio, effects, generation, server_tools, speech, text, vision
 
-MODULES = (server_tools, vision, speech, text, audio, generation)
+MODULES = (server_tools, vision, speech, text, audio, generation, effects)
 
 
 def register_all(mcp: FastMCP) -> None:
@@ -14,4 +14,14 @@ def register_all(mcp: FastMCP) -> None:
         module.register(mcp)
 
 
-__all__ = ["register_all", "MODULES", "audio", "generation", "server_tools", "speech", "text", "vision"]
+__all__ = [
+    "register_all",
+    "MODULES",
+    "audio",
+    "effects",
+    "generation",
+    "server_tools",
+    "speech",
+    "text",
+    "vision",
+]

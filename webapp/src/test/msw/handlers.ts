@@ -1,11 +1,18 @@
 import { HttpResponse, http } from 'msw';
-import type {
-  BodyPoseResponse,
-  Capability,
-  FacesResponse,
-  HandPoseResponse,
-  Health,
-  OcrResponse,
+import {
+  DEFAULT_FACE_PARAMETERS,
+  DEFAULT_VOICE_PARAMETERS,
+  type BodyPoseResponse,
+  type Capability,
+  type FacePresetsResponse,
+  type FacesResponse,
+  type FaceSwapResponse,
+  type FaceTransformResponse,
+  type HandPoseResponse,
+  type Health,
+  type OcrResponse,
+  type VoiceMatchResponse,
+  type VoicePresetsResponse,
 } from '../../api/types';
 
 export const BASE = 'http://phone.test:8080';
@@ -45,6 +52,24 @@ export const capabilitiesFixture: Capability[] = [
     available: false,
     reason: 'Needs Apple Intelligence.',
     endpoints: ['POST /v1/images/generations'],
+  },
+  {
+    id: 'voice-fx',
+    name: 'Voice Changer',
+    category: 'speech',
+    summary: 'Voice effects',
+    requires_network: false,
+    available: true,
+    endpoints: ['POST /v1/voice/transform'],
+  },
+  {
+    id: 'face-fx',
+    name: 'Face Changer',
+    category: 'vision',
+    summary: 'Face effects',
+    requires_network: false,
+    available: true,
+    endpoints: ['POST /v1/face/transform'],
   },
 ];
 
@@ -109,6 +134,76 @@ export const handPoseFixture: HandPoseResponse = {
   ],
 };
 
+/** 1×1 transparent PNG — enough for the envelope decode path. */
+export const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk' +
+  'YPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+/** 44-byte WAV header, no samples. */
+export const WAV_BASE64 = 'UklGRiQAAABXQVZFZm10IBAAAAABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+
+export const voicePresetsFixture: VoicePresetsResponse = {
+  presets: [
+    { id: 'none', name: 'None', parameters: DEFAULT_VOICE_PARAMETERS },
+    {
+      id: 'giant',
+      name: 'Giant',
+      parameters: { ...DEFAULT_VOICE_PARAMETERS, pitch_cents: -800, rate: 0.9 },
+    },
+  ],
+  distortion_presets: ['multiDecimated1', 'speechRadioTower'],
+  reverb_presets: ['smallRoom', 'largeRoom'],
+};
+
+export const facePresetsFixture: FacePresetsResponse = {
+  presets: [
+    { id: 'none', name: 'None', parameters: DEFAULT_FACE_PARAMETERS },
+    {
+      id: 'cartoon',
+      name: 'Cartoon',
+      parameters: { ...DEFAULT_FACE_PARAMETERS, eye_size: 0.75, style: 'comic' },
+    },
+  ],
+  styles: ['none', 'comic', 'pixellate'],
+  directions: ['source_into_target', 'target_into_source'],
+};
+
+export const faceTransformFixture: FaceTransformResponse = {
+  image: { width: 1, height: 1 },
+  faces: 1,
+  result: { content_type: 'image/png', data_base64: PNG_BASE64, width: 1, height: 1 },
+};
+
+export const faceSwapFixture: FaceSwapResponse = {
+  image: { width: 1, height: 1 },
+  result: { content_type: 'image/png', data_base64: PNG_BASE64, width: 1, height: 1 },
+  notes: [
+    'Landmark-aligned composite: existing pixels are warped and blended onto the destination face. This is not a generative face swap and synthesizes no new identity.',
+    'Best results come from similar head pose, framing and lighting in both photos.',
+  ],
+};
+
+export const voiceMatchFixture: VoiceMatchResponse = {
+  source: {
+    median_f0_hz: 118.4,
+    f0_low_hz: 96.2,
+    f0_high_hz: 151,
+    spectral_centroid_hz: 1840.5,
+    voiced_ratio: 0.62,
+    duration_s: 4.1,
+    sample_rate: 44100,
+  },
+  target: {
+    median_f0_hz: 210.7,
+    f0_low_hz: 180.1,
+    f0_high_hz: 260.4,
+    spectral_centroid_hz: 2400.2,
+    voiced_ratio: 0.71,
+    duration_s: 3.8,
+    sample_rate: 44100,
+  },
+  parameters: { ...DEFAULT_VOICE_PARAMETERS, pitch_cents: 380, brightness: 0.22 },
+};
+
 export const handlers = [
   http.get(`${BASE}/health`, () => HttpResponse.json(healthFixture)),
   http.get(`${BASE}/v1/capabilities`, () => HttpResponse.json(capabilitiesFixture)),
@@ -118,6 +213,29 @@ export const handlers = [
   http.post(`${BASE}/v1/vision/hand-pose`, () => HttpResponse.json(handPoseFixture)),
   http.get(`${BASE}/v1/images/styles`, () => HttpResponse.json({ styles: [] })),
   http.get(`${BASE}/v1/speech/voices`, () => HttpResponse.json({ voices: [] })),
+  http.get(`${BASE}/v1/voice/presets`, () => HttpResponse.json(voicePresetsFixture)),
+  http.post(`${BASE}/v1/voice/transform`, () =>
+    HttpResponse.json({
+      content_type: 'audio/wav',
+      data_base64: WAV_BASE64,
+      duration_s: 1.5,
+      sample_rate: 44100,
+    }),
+  ),
+  http.post(`${BASE}/v1/voice/analyze`, () => HttpResponse.json(voiceMatchFixture.source)),
+  http.post(`${BASE}/v1/voice/match`, () => HttpResponse.json(voiceMatchFixture)),
+  http.post(`${BASE}/v1/voice/respeak`, () =>
+    HttpResponse.json({
+      content_type: 'audio/wav',
+      data_base64: WAV_BASE64,
+      duration_s: 2.9,
+      sample_rate: 22050,
+      text: 'hello from the phone',
+    }),
+  ),
+  http.get(`${BASE}/v1/face/presets`, () => HttpResponse.json(facePresetsFixture)),
+  http.post(`${BASE}/v1/face/transform`, () => HttpResponse.json(faceTransformFixture)),
+  http.post(`${BASE}/v1/face/swap`, () => HttpResponse.json(faceSwapFixture)),
   http.post(`${BASE}/v1/chat/completions`, () =>
     HttpResponse.json({
       id: 'chatcmpl-test',

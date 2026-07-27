@@ -7,7 +7,12 @@ import type {
   ChatMessage,
   ClassifyResponse,
   DocumentResponse,
+  FaceParameters,
+  FacePresetsResponse,
   FacesResponse,
+  FaceSwapParameters,
+  FaceSwapResponse,
+  FaceTransformResponse,
   HandPoseResponse,
   Health,
   ImageEnvelope,
@@ -23,6 +28,11 @@ import type {
   TranslateResponse,
   TranslationLanguages,
   Voice,
+  VoiceMatchResponse,
+  VoiceParameters,
+  VoicePresetsResponse,
+  VoiceProfile,
+  VoiceRespeakResponse,
 } from './types';
 import { base64ToBlob, blobToBase64 } from '../utils/base64';
 import { log } from '../utils/log';
@@ -238,4 +248,71 @@ export const api = {
   imageStyles: (c: ApiConfig) => getJson<{ styles: string[] }>(c, '/v1/images/styles'),
   imageGenerate: (c: ApiConfig, prompt: string, n: number, style?: string) =>
     postJson<ImageGenerationResponse>(c, '/v1/images/generations', { prompt, n, style }),
+  imageStylize: async (
+    c: ApiConfig,
+    image: Blob,
+    prompt: string | undefined,
+    n: number,
+    style?: string,
+  ) =>
+    postJson<ImageGenerationResponse>(c, '/v1/images/stylize', {
+      image_base64: await blobToBase64(image),
+      prompt,
+      n,
+      style,
+    }),
+
+  voicePresets: (c: ApiConfig) => getJson<VoicePresetsResponse>(c, '/v1/voice/presets'),
+  // The JSON path is used rather than the binary one so `parameters` can ride
+  // along in the same request; the server accepts either.
+  voiceTransform: async (c: ApiConfig, audio: Blob, parameters: VoiceParameters) =>
+    postJson<AudioEnvelope>(c, '/v1/voice/transform', {
+      audio_base64: await blobToBase64(audio),
+      parameters,
+    }),
+  voiceAnalyze: (c: ApiConfig, audio: Blob) =>
+    postBinary<VoiceProfile>(c, '/v1/voice/analyze', audio),
+  voiceMatch: async (c: ApiConfig, source: Blob, target: Blob, transform = false) =>
+    postJson<VoiceMatchResponse>(c, '/v1/voice/match', {
+      source_audio_base64: await blobToBase64(source),
+      target_audio_base64: await blobToBase64(target),
+      transform,
+    }),
+  voiceRespeak: async (
+    c: ApiConfig,
+    audio: Blob,
+    voice?: string,
+    locale?: string,
+    parameters?: VoiceParameters,
+  ) =>
+    postJson<VoiceRespeakResponse>(c, '/v1/voice/respeak', {
+      audio_base64: await blobToBase64(audio),
+      voice,
+      locale,
+      parameters,
+    }),
+
+  facePresets: (c: ApiConfig) => getJson<FacePresetsResponse>(c, '/v1/face/presets'),
+  faceTransform: async (
+    c: ApiConfig,
+    image: Blob,
+    parameters: FaceParameters,
+    format: 'png' | 'jpeg' = 'png',
+  ) =>
+    postJson<FaceTransformResponse>(c, `/v1/face/transform?format=${format}`, {
+      image_base64: await blobToBase64(image),
+      parameters,
+    }),
+  faceSwap: async (
+    c: ApiConfig,
+    source: Blob,
+    target: Blob,
+    parameters: FaceSwapParameters,
+    format: 'png' | 'jpeg' = 'png',
+  ) =>
+    postJson<FaceSwapResponse>(c, `/v1/face/swap?format=${format}`, {
+      source_image_base64: await blobToBase64(source),
+      target_image_base64: await blobToBase64(target),
+      parameters,
+    }),
 };

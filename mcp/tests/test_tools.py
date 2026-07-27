@@ -286,3 +286,117 @@ async def test_scan_document_returns_image_and_metadata(client, png_bytes):
 async def test_bad_input_reports_the_phones_error_message(client):
     with pytest.raises(ToolError, match="Expected an image"):
         await client.call_tool("ocr_image", {"image": _b64(fake_phone.WAV)})
+
+
+# --------------------------------------------------------- voice & face effects
+
+
+async def test_voice_transform_saves_to_disk_and_does_not_inline_audio(client, tmp_path, wav_bytes):
+    """Same reasoning as speak_text — a clip must not land in the context."""
+    target = tmp_path / "giant.wav"
+    result = await client.call_tool(
+        "transform_voice",
+        {"audio": _b64(wav_bytes), "preset": "giant", "save_path": str(target)},
+    )
+    assert [type(b).__name__ for b in result.content] == ["TextContent"]
+    payload = _payload(result)
+    assert payload["saved_to"] == str(target)
+    assert payload["preset"] == "giant"
+    assert target.exists()
+
+
+async def test_voice_transform_forwards_settings_as_query(client, wav_bytes):
+    await client.call_tool(
+        "transform_voice", {"audio": _b64(wav_bytes), "preset": "giant", "pitch_cents": -500}
+    )
+    sent = [r for r in fake_phone.state.received if r["path"] == "/v1/voice/transform"][-1]
+    assert sent["query"]["preset"] == "giant"
+    assert float(sent["query"]["pitch_cents"]) == -500
+    # Unset knobs must not be sent at all — the phone would clamp a stray 0.
+    assert "reverb" not in sent["query"]
+
+
+async def test_voice_analyze_returns_the_profile(client, wav_bytes):
+    payload = _payload(await client.call_tool("analyze_voice", {"audio": _b64(wav_bytes)}))
+    assert payload["median_f0_hz"] == 118.4
+    assert payload["voiced_ratio"] == 0.62
+
+
+async def test_voice_match_summarises_and_says_it_is_not_cloning(client, wav_bytes):
+    payload = _payload(
+        await client.call_tool(
+            "match_voice",
+            {"source_audio": _b64(wav_bytes), "target_audio": _b64(wav_bytes)},
+        )
+    )
+    assert payload["parameters"]["pitch_cents"] == 380
+    assert "not voice cloning" in payload["note"]
+    # Without transform=true there is no rendered clip to report.
+    assert "audio" not in payload
+
+
+async def test_voice_match_saves_the_rendering_when_asked(client, tmp_path, wav_bytes):
+    target = tmp_path / "matched.wav"
+    payload = _payload(
+        await client.call_tool(
+            "match_voice",
+            {
+                "source_audio": _b64(wav_bytes),
+                "target_audio": _b64(wav_bytes),
+                "transform": True,
+                "save_path": str(target),
+            },
+        )
+    )
+    assert payload["audio"]["saved_to"] == str(target)
+    assert target.exists()
+
+
+async def test_respeak_returns_the_transcript_with_the_audio(client, tmp_path, wav_bytes):
+    payload = _payload(
+        await client.call_tool(
+            "respeak_audio",
+            {"audio": _b64(wav_bytes), "save_path": str(tmp_path / "r.wav")},
+        )
+    )
+    assert payload["text"] == "hello from the phone"
+    assert payload["saved_to"].endswith("r.wav")
+
+
+async def test_face_transform_returns_an_image_and_a_face_count(client, png_bytes):
+    result = await client.call_tool("transform_face", {"image": _b64(png_bytes)})
+    assert "ImageContent" in [type(b).__name__ for b in result.content]
+    payload = _payload(result)
+    assert payload["faces"] == 1
+    assert "note" not in payload
+
+
+async def test_face_transform_reports_no_face_as_a_normal_outcome(client, png_bytes):
+    """`faces: 0` means the image came back unchanged — not an error."""
+    result = await client.call_tool(
+        "transform_face", {"image": _b64(png_bytes), "preset": "noface"}
+    )
+    payload = _payload(result)
+    assert payload["faces"] == 0
+    assert "No face was found" in payload["note"]
+
+
+async def test_face_swap_passes_the_server_notes_through(client, png_bytes):
+    result = await client.call_tool(
+        "swap_faces",
+        {"source_image": _b64(png_bytes), "target_image": _b64(png_bytes)},
+    )
+    payload = _payload(result)
+    assert any("not a generative face swap" in note for note in payload["notes"])
+    sent = [r for r in fake_phone.state.received if r["path"] == "/v1/face/swap"][-1]
+    assert sent["body"]["parameters"]["direction"] == "source_into_target"
+
+
+async def test_stylize_photo_is_gated_with_image_generation(client):
+    """Stylize shares the image-gen id, which the fake phone reports off — so it
+    is hidden by the same gating that hides generate_image."""
+    names = {tool.name for tool in await client.list_tools()}
+    assert "stylize_photo" not in names
+    assert "generate_image" not in names
+    # The effects tools are backed by available capabilities, so they stay up.
+    assert {"transform_voice", "transform_face"} <= names

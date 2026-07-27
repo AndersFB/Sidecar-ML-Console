@@ -113,7 +113,7 @@ async def test_fake_phone_matches_the_documented_capability_ids():
     """Guards the fixture itself against drifting from docs/api/server.md."""
     documented = {
         "chat", "vision-ocr", "vision-analysis", "vision-detectors", "vision-subjects",
-        "nlp", "speech-speak", "speech-transcribe", "sound", "shazam", "translation",
-        "image-gen",
+        "face-fx", "nlp", "speech-speak", "speech-transcribe", "voice-fx", "sound",
+        "shazam", "translation", "image-gen",
     }
     assert {c["id"] for c in fake_phone.CAPABILITIES} == documented

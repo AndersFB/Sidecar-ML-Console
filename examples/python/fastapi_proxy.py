@@ -4,7 +4,16 @@ Every phone endpoint is re-exposed under the same path with typed request
 bodies and file uploads, so http://127.0.0.1:8000/docs gives you an
 interactive Swagger UI for the whole phone API. Binary results (speech,
 masks) are returned as real image/audio responses instead of base64
-envelopes, and chat streaming is passed through as Server-Sent Events.
+envelopes, and chat streaming is passed through as Server-Sent Events. The two
+broadcast routes are relayed chunk-for-chunk, so
+`http://127.0.0.1:8000/v1/face/broadcast` plays in an `<img>` exactly like the
+phone's own URL.
+
+The one deliberate gap: `GET /v1/voice/stream` and `GET /v1/face/stream` are
+WebSockets, and proxying them means pumping frames in both directions plus a
+client WebSocket dependency for no gain — a browser can already open them
+directly, and the phone accepts `?token=` there precisely so it can. Point
+clients at the phone for those two.
 
 Run:
     SIDECAR_URL=http://<phone-ip>:8080 uvicorn fastapi_proxy:app --reload
@@ -114,6 +123,27 @@ async def _file_b64(file: UploadFile) -> str:
     return base64.b64encode(await file.read()).decode()
 
 
+async def _passthrough(path: str, params: dict | None = None) -> StreamingResponse:
+    """Relay a chunked broadcast body straight through, preserving its type.
+
+    Same machinery as the chat SSE route: no `Content-Length`, so the response
+    stays chunked all the way to the caller, and the upstream connection is
+    closed when the client disconnects. The 30 s idle timeout and the
+    one-session-per-modality rule are the phone's — this proxy holds the slot
+    for as long as its own client stays attached.
+    """
+    request = phone.build_request("GET", path, params=params or {}, timeout=None)
+    upstream = await phone.send(request, stream=True)
+    if upstream.is_error:
+        await upstream.aread()
+        _fail(upstream)
+    return StreamingResponse(
+        upstream.aiter_raw(),
+        media_type=upstream.headers.get("content-type", "application/octet-stream"),
+        background=BackgroundTask(upstream.aclose),
+    )
+
+
 # ------------------------------------------------------------- body models
 
 
@@ -135,6 +165,35 @@ class ImageGenRequest(BaseModel):
     prompt: str
     n: int = 1
     style: str | None = None  # animation | illustration | sketch
+
+
+class ImageStylizeRequest(BaseModel):
+    image_base64: str
+    prompt: str | None = None  # optional concept layered on the photo
+    n: int = 1
+    style: str | None = None
+
+
+class FaceSwapRequest(BaseModel):
+    source_image_base64: str
+    target_image_base64: str
+    # direction, blend, feather, color_match, scale, offset_x, offset_y, face —
+    # all clamped server-side, so this stays an open dict rather than a second
+    # copy of the range table.
+    parameters: dict | None = None
+
+
+class VoiceMatchRequest(BaseModel):
+    source_audio_base64: str
+    target_audio_base64: str
+    transform: bool | None = None
+
+
+class VoiceRespeakRequest(BaseModel):
+    audio_base64: str
+    voice: str | None = None  # identifier or BCP-47 language code
+    locale: str | None = None
+    parameters: dict | None = None
 
 
 class SpeakRequest(BaseModel):
@@ -349,6 +408,12 @@ async def images_generations(body: ImageGenRequest) -> Any:
     return await _post_json("/v1/images/generations", body.model_dump(exclude_none=True))
 
 
+@app.post("/v1/images/stylize", tags=["Image generation"])
+async def images_stylize(body: ImageStylizeRequest) -> Any:
+    """Restyle a photo of a person (needs Apple Intelligence)."""
+    return await _post_json("/v1/images/stylize", body.model_dump(exclude_none=True))
+
+
 @app.get("/v1/images/styles", tags=["Image generation"])
 async def images_styles() -> Any:
     """Generation styles available on the device."""
@@ -429,6 +494,141 @@ async def nlp_embed(body: NlpEmbedRequest) -> Any:
 async def nlp_similarity(body: NlpSimilarityRequest) -> Any:
     """Semantic distance between two texts."""
     return await _post_json("/v1/nlp/similarity", body.model_dump(exclude_none=True))
+
+
+# ------------------------------------------------------------ face effects
+
+
+@app.get("/v1/face/presets", tags=["Face effects"])
+async def face_presets() -> Any:
+    """Face presets, style names and swap directions."""
+    return await _get("/v1/face/presets")
+
+
+@app.post("/v1/face/transform", tags=["Face effects"])
+async def face_transform(
+    file: UploadFile = File(...),
+    preset: str | None = None,
+    format: str | None = None,
+    eye_size: float | None = None,
+    nose_width: float | None = None,
+    mouth_size: float | None = None,
+    chin_length: float | None = None,
+    face_width: float | None = None,
+    swirl: float | None = None,
+    smoothing: float | None = None,
+    warmth: float | None = None,
+    style: str | None = None,
+    style_amount: float | None = None,
+    mask_to_face: bool | None = None,
+) -> Any:
+    """Reshape and restyle the faces in a photo. `faces: 0` means no face was
+    found and the image came back unchanged — not an error."""
+    return await _post_upload(
+        "/v1/face/transform",
+        file,
+        _params(
+            preset=preset,
+            format=format,
+            eye_size=eye_size,
+            nose_width=nose_width,
+            mouth_size=mouth_size,
+            chin_length=chin_length,
+            face_width=face_width,
+            swirl=swirl,
+            smoothing=smoothing,
+            warmth=warmth,
+            style=style,
+            style_amount=style_amount,
+            mask_to_face=mask_to_face,
+        ),
+    )
+
+
+@app.post("/v1/face/swap", tags=["Face effects"])
+async def face_swap(body: FaceSwapRequest, format: str | None = None) -> Any:
+    """Landmark-aligned face composite — not a generative swap. Surface the
+    response `notes`, which say what the technique is and isn't."""
+    return await _post_json(
+        "/v1/face/swap", body.model_dump(exclude_none=True), _params(format=format)
+    )
+
+
+@app.get("/v1/face/broadcast", tags=["Face effects"])
+async def face_broadcast(preset: str | None = None) -> StreamingResponse:
+    """MJPEG of the phone's own transformed camera. Renders in a bare <img src>."""
+    return await _passthrough("/v1/face/broadcast", _params(preset=preset))
+
+
+# ----------------------------------------------------------- voice effects
+
+
+@app.get("/v1/voice/presets", tags=["Voice effects"])
+async def voice_presets() -> Any:
+    """Voice presets plus the accepted distortion and reverb preset names."""
+    return await _get("/v1/voice/presets")
+
+
+@app.post(
+    "/v1/voice/transform",
+    tags=["Voice effects"],
+    response_class=Response,
+    responses={200: {"content": {"audio/wav": {}}}},
+)
+async def voice_transform(
+    file: UploadFile = File(...),
+    preset: str | None = None,
+    pitch_cents: float | None = None,
+    rate: float | None = None,
+    brightness: float | None = None,
+    throat: float | None = None,
+    distortion: float | None = None,
+    reverb: float | None = None,
+    gain_db: float | None = None,
+) -> Response:
+    """Apply the voice changer to a clip; returns WAV bytes."""
+    envelope = await _post_upload(
+        "/v1/voice/transform",
+        file,
+        _params(
+            preset=preset,
+            pitch_cents=pitch_cents,
+            rate=rate,
+            brightness=brightness,
+            throat=throat,
+            distortion=distortion,
+            reverb=reverb,
+            gain_db=gain_db,
+        ),
+    )
+    return _raw(envelope)
+
+
+@app.post("/v1/voice/analyze", tags=["Voice effects"])
+async def voice_analyze(file: UploadFile = File(...)) -> Any:
+    """Acoustic profile of a voice. `voiced_ratio` below 0.1 means the F0
+    estimate is not trustworthy."""
+    return await _post_upload("/v1/voice/analyze", file)
+
+
+@app.post("/v1/voice/match", tags=["Voice effects"])
+async def voice_match(body: VoiceMatchRequest) -> Any:
+    """Derive the settings matching a reference voice. Matches register and
+    timbre — this is not voice cloning."""
+    return await _post_json("/v1/voice/match", body.model_dump(exclude_none=True))
+
+
+@app.post("/v1/voice/respeak", tags=["Voice effects"])
+async def voice_respeak(body: VoiceRespeakRequest) -> Any:
+    """Transcribe a clip and speak it back through a system voice. Returns the
+    envelope including the recognised `text`."""
+    return await _post_json("/v1/voice/respeak", body.model_dump(exclude_none=True))
+
+
+@app.get("/v1/voice/broadcast", tags=["Voice effects"])
+async def voice_broadcast(preset: str | None = None) -> StreamingResponse:
+    """Streaming WAV of the phone's own transformed microphone."""
+    return await _passthrough("/v1/voice/broadcast", _params(preset=preset))
 
 
 # ------------------------------------------------------------------- audio

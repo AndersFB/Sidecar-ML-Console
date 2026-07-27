@@ -23,10 +23,10 @@ ALWAYS_ON = {"sidecar_discover", "sidecar_connect", "sidecar_status", "sidecar_c
 
 def tool_routes() -> dict[str, str]:
     """Merged tool-name → "METHOD /path" map across every tool module."""
-    from .tools import audio, generation, speech, text, vision
+    from .tools import audio, effects, generation, speech, text, vision
 
     routes: dict[str, str] = {}
-    for module in (vision, speech, text, audio, generation):
+    for module in (vision, speech, text, audio, generation, effects):
         routes.update(module.ROUTES)
     return routes
 
