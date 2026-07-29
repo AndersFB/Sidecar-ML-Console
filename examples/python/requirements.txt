@@ -5,3 +5,6 @@ fastapi>=0.115
 python-multipart>=0.0.9
 uvicorn>=0.30
 zeroconf>=0.132
+# Optional: only the WebSocket ingest routes (/v1/voice/stream, /v1/face/stream)
+# need this. Everything else — including both /broadcast routes — is plain HTTP.
+websockets>=13.0

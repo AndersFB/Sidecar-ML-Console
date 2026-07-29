@@ -7,7 +7,9 @@ import { BarcodePanel } from './BarcodePanel';
 import { ClassifyPanel } from './ClassifyPanel';
 import { SimilarityPanel } from './SimilarityPanel';
 import { FacesPanel } from './FacesPanel';
+import { FaceFxPanel } from './FaceFxPanel';
 import { PosePanel } from './PosePanel';
+import { VoiceFxPanel } from './VoiceFxPanel';
 import { DocumentPanel } from './DocumentPanel';
 import { TranscribePanel } from './TranscribePanel';
 import { SpeakPanel } from './SpeakPanel';
@@ -42,10 +44,12 @@ export const PANELS: PanelDef[] = [
   { id: 'faces', capabilityId: 'vision-detectors', title: 'Faces', icon: 'smile', group: 'Vision', component: FacesPanel },
   { id: 'pose', capabilityId: 'vision-detectors', title: 'Pose', icon: 'pose', group: 'Vision', component: PosePanel },
   { id: 'document', capabilityId: 'vision-detectors', title: 'Document Scan', icon: 'file-text', group: 'Vision', component: DocumentPanel },
+  { id: 'face-fx', capabilityId: 'face-fx', title: 'Face Changer', icon: 'face-fx', group: 'Vision', component: FaceFxPanel },
   { id: 'image-gen', capabilityId: 'image-gen', title: 'Generate Image', icon: 'sparkle', group: 'Vision', component: ImageGenPanel },
 
   { id: 'transcribe', capabilityId: 'speech-transcribe', title: 'Transcribe', icon: 'mic', group: 'Audio', component: TranscribePanel },
   { id: 'speak', capabilityId: 'speech-speak', title: 'Speak', icon: 'speaker', group: 'Audio', component: SpeakPanel },
+  { id: 'voice-fx', capabilityId: 'voice-fx', title: 'Voice Changer', icon: 'waveform', group: 'Audio', component: VoiceFxPanel },
   { id: 'sound', capabilityId: 'sound', title: 'Sound Events', icon: 'audio-lines', group: 'Audio', component: SoundPanel },
   { id: 'shazam', capabilityId: 'shazam', title: 'Song ID', icon: 'music', group: 'Audio', component: ShazamPanel },
 

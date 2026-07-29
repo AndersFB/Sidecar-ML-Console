@@ -228,6 +228,138 @@ export interface ImageGenerationResponse {
   data: { b64_json: string }[];
 }
 
+// MARK: Voice FX
+
+/**
+ * Voice changer settings. Mirrors the server's `VoiceParameters`, which clamps
+ * every field on decode — `VOICE_LIMITS` below repeats those bounds so the
+ * sliders and the server's clamp cannot disagree.
+ */
+export interface VoiceParameters {
+  pitch_cents: number;
+  rate: number;
+  brightness: number;
+  throat: number;
+  distortion: number;
+  distortion_preset?: string | null;
+  reverb: number;
+  reverb_preset?: string | null;
+  gain_db: number;
+}
+
+export const VOICE_LIMITS = {
+  pitch_cents: { min: -2400, max: 2400, step: 10 },
+  rate: { min: 0.5, max: 2, step: 0.01 },
+  brightness: { min: -1, max: 1, step: 0.01 },
+  throat: { min: -1, max: 1, step: 0.01 },
+  distortion: { min: 0, max: 1, step: 0.01 },
+  reverb: { min: 0, max: 1, step: 0.01 },
+  gain_db: { min: -12, max: 12, step: 0.1 },
+} as const;
+
+export const DEFAULT_VOICE_PARAMETERS: VoiceParameters = {
+  pitch_cents: 0,
+  rate: 1,
+  brightness: 0,
+  throat: 0,
+  distortion: 0,
+  reverb: 0,
+  gain_db: 0,
+};
+
+export interface VoicePreset {
+  id: string;
+  name: string;
+  parameters: VoiceParameters;
+}
+
+export interface VoicePresetsResponse {
+  presets: VoicePreset[];
+  distortion_presets: string[];
+  reverb_presets: string[];
+}
+
+export interface VoiceProfile {
+  median_f0_hz?: number | null;
+  f0_low_hz?: number | null;
+  f0_high_hz?: number | null;
+  spectral_centroid_hz: number;
+  /** Below 0.1 the F0 estimate is not trustworthy. */
+  voiced_ratio: number;
+  duration_s: number;
+  sample_rate: number;
+}
+
+export interface VoiceRespeakResponse extends AudioEnvelope {
+  text: string;
+}
+
+// MARK: Face FX
+
+/** Mirrors the server's `FaceParameters`; every geometry control is signed and
+ * centred on 0, so 0 is always identity. */
+export interface FaceParameters {
+  eye_size: number;
+  nose_width: number;
+  mouth_size: number;
+  chin_length: number;
+  face_width: number;
+  swirl: number;
+  smoothing: number;
+  warmth: number;
+  brightness: number;
+  saturation: number;
+  style?: string | null;
+  style_amount: number;
+  /** Composites the effects back through a face-shaped mask, leaving the
+   * background untouched — the difference between a face filter and a
+   * whole-image filter. */
+  mask_to_face: boolean;
+  mask_feather: number;
+  mask_expand: number;
+}
+
+export const FACE_LIMITS = {
+  signed: { min: -1, max: 1, step: 0.01 },
+  unit: { min: 0, max: 1, step: 0.01 },
+  mask_expand: { min: -0.3, max: 0.6, step: 0.01 },
+} as const;
+
+export const DEFAULT_FACE_PARAMETERS: FaceParameters = {
+  eye_size: 0,
+  nose_width: 0,
+  mouth_size: 0,
+  chin_length: 0,
+  face_width: 0,
+  swirl: 0,
+  smoothing: 0,
+  warmth: 0,
+  brightness: 0,
+  saturation: 0,
+  style_amount: 1,
+  mask_to_face: true,
+  mask_feather: 0.5,
+  mask_expand: 0.08,
+};
+
+export interface FacePreset {
+  id: string;
+  name: string;
+  parameters: FaceParameters;
+}
+
+export interface FacePresetsResponse {
+  presets: FacePreset[];
+  styles: string[];
+}
+
+export interface FaceTransformResponse {
+  image: ImageSize;
+  /** Zero means the image came back untouched rather than the call failing. */
+  faces: number;
+  result: ImageEnvelope;
+}
+
 export interface ApiErrorEnvelope {
   error: { code: string; message: string; type: string };
 }

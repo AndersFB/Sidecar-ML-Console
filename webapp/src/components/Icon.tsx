@@ -149,6 +149,19 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M9 7h7M9 11h5" />
     </>
   ),
+  'face-fx': (
+    <>
+      <path d="M12 21a9 9 0 1 1 8.4-5.8" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      <path d="M9 9h.01M15 9h.01" />
+      <path d="m19 17 .8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8z" />
+    </>
+  ),
+  waveform: (
+    <>
+      <path d="M3 12h2.5L8 5l3 14 3-11 2.5 4H21" />
+    </>
+  ),
 };
 
 export type IconName = keyof typeof GLYPHS;

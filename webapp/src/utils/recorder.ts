@@ -98,3 +98,104 @@ export class MicRecorder {
     return encodeWav(merged, sampleRate);
   }
 }
+
+/** Milliseconds of audio per emitted chunk. The worklet fires every render
+ * quantum (128 frames — under 3 ms), which is far too chatty for one socket
+ * frame each; batching to this trades a little latency for a sane frame rate. */
+const STREAM_CHUNK_MS = 100;
+
+/**
+ * Microphone capture → fixed-size Float32 chunks, for the live voice socket.
+ *
+ * The buffering counterpart of `MicRecorder`: same worklet, same secure-context
+ * requirement, but samples are handed straight to a callback instead of being
+ * accumulated for a WAV at the end. Nothing is retained, so a stream can run
+ * for as long as the user leaves it open.
+ */
+export class MicStreamer {
+  private context: AudioContext | null = null;
+  private stream: MediaStream | null = null;
+  private cleanup: (() => void) | null = null;
+  private pending: Float32Array[] = [];
+  private pendingLength = 0;
+  private chunkSize = 0;
+
+  constructor(private onChunk: (samples: Float32Array) => void) {}
+
+  get isStreaming(): boolean {
+    return this.context !== null;
+  }
+
+  /** Valid only once `start()` has resolved. */
+  get sampleRate(): number {
+    return this.context?.sampleRate ?? 0;
+  }
+
+  async start(): Promise<void> {
+    if (this.context) return;
+    this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    this.context = new AudioContext();
+    this.chunkSize = Math.round((this.context.sampleRate * STREAM_CHUNK_MS) / 1000);
+    this.pending = [];
+    this.pendingLength = 0;
+    const source = this.context.createMediaStreamSource(this.stream);
+
+    const accept = (samples: Float32Array) => {
+      this.pending.push(samples);
+      this.pendingLength += samples.length;
+      while (this.pendingLength >= this.chunkSize) this.emitChunk();
+    };
+
+    try {
+      await this.context.audioWorklet.addModule(workletUrl());
+      const worklet = new AudioWorkletNode(this.context, 'recorder-processor');
+      worklet.port.onmessage = (event: MessageEvent<Float32Array>) => accept(event.data);
+      source.connect(worklet);
+      this.cleanup = () => {
+        worklet.port.onmessage = null;
+        source.disconnect();
+        worklet.disconnect();
+      };
+    } catch {
+      // Older engines: ScriptProcessor fallback.
+      const processor = this.context.createScriptProcessor(4096, 1, 1);
+      processor.onaudioprocess = (event) => {
+        accept(new Float32Array(event.inputBuffer.getChannelData(0)));
+      };
+      source.connect(processor);
+      processor.connect(this.context.destination);
+      this.cleanup = () => {
+        processor.onaudioprocess = null;
+        source.disconnect();
+        processor.disconnect();
+      };
+    }
+  }
+
+  /** Splices exactly `chunkSize` samples out of the pending queue and emits. */
+  private emitChunk(): void {
+    const chunk = new Float32Array(this.chunkSize);
+    let filled = 0;
+    while (filled < this.chunkSize) {
+      const head = this.pending[0];
+      const take = Math.min(head.length, this.chunkSize - filled);
+      chunk.set(take === head.length ? head : head.subarray(0, take), filled);
+      filled += take;
+      if (take === head.length) this.pending.shift();
+      else this.pending[0] = head.subarray(take);
+    }
+    this.pendingLength -= this.chunkSize;
+    this.onChunk(chunk);
+  }
+
+  stop(): void {
+    this.cleanup?.();
+    this.cleanup = null;
+    this.stream?.getTracks().forEach((track) => track.stop());
+    this.stream = null;
+    void this.context?.close();
+    this.context = null;
+    this.pending = [];
+    this.pendingLength = 0;
+  }
+}

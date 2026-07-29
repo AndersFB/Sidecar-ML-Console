@@ -30,12 +30,23 @@ The per-endpoint reference is split by area under [`docs/api/`](api/):
 | [`POST /v1/vision/body-pose`](api/vision.md#post-v1visionbody-pose) | Body skeleton joints |
 | [`POST /v1/vision/hand-pose`](api/vision.md#post-v1visionhand-pose) | Hand joints with chirality |
 | [`POST /v1/vision/document`](api/vision.md#post-v1visiondocument) | Document detection + perspective-corrected scan |
+| [`GET /v1/face/presets`](api/effects.md#get-v1facepresets) | Face presets and style names |
+| [`POST /v1/face/transform`](api/effects.md#post-v1facetransform) | Reshape / restyle the faces in a photo |
+| [`GET /v1/face/stream`](api/effects.md#get-v1facestream) | *WebSocket* — send camera frames, get transformed frames |
+| [`GET /v1/face/broadcast`](api/effects.md#get-v1facebroadcast) | MJPEG of the phone's own transformed camera |
 | [`POST /v1/images/generations`](api/images.md#post-v1imagesgenerations) | Text-to-image (Image Playground) |
+| [`POST /v1/images/stylize`](api/images.md#post-v1imagesstylize) | Restyle a photo of a person |
 | [`GET /v1/images/styles`](api/images.md#get-v1imagesstyles) | Available generation styles |
 | [`POST /v1/speech/speak`](api/speech.md#post-v1speechspeak) | Text-to-speech (WAV) |
 | [`GET /v1/speech/voices`](api/speech.md#get-v1speechvoices) | Installed voices |
 | [`POST /v1/speech/transcribe`](api/speech.md#post-v1speechtranscribe) | Speech-to-text with timed segments |
 | [`GET /v1/speech/transcribe/locales`](api/speech.md#get-v1speechtranscribelocales) | Transcription languages |
+| [`GET /v1/voice/presets`](api/effects.md#get-v1voicepresets) | Voice presets + distortion/reverb preset names |
+| [`POST /v1/voice/transform`](api/effects.md#post-v1voicetransform) | Voice changer over a clip |
+| [`POST /v1/voice/analyze`](api/effects.md#post-v1voiceanalyze) | Acoustic profile of a voice |
+| [`POST /v1/voice/respeak`](api/effects.md#post-v1voicerespeak) | Re-speak a clip through a system voice |
+| [`GET /v1/voice/stream`](api/effects.md#get-v1voicestream) | *WebSocket* — send mic audio, get transformed audio |
+| [`GET /v1/voice/broadcast`](api/effects.md#get-v1voicebroadcast) | Streaming WAV of the phone's own transformed mic |
 | [`GET /v1/translation/languages`](api/translation.md#get-v1translationlanguages) | Translation languages + pair status |
 | [`POST /v1/translation/translate`](api/translation.md#post-v1translationtranslate) | Offline translation |
 | [`POST /v1/nlp/analyze`](api/nlp.md#post-v1nlpanalyze) | Language, sentiment, entities, tokens |
@@ -147,6 +158,50 @@ rate-limits itself.
 For continuous use — streaming camera frames to a vision endpoint — don't
 queue: keep one request in flight per client and drop stale frames. See
 [Live video](api/vision.md#live-video).
+
+### Streaming
+
+The voice and face effects add four long-lived routes that don't follow the
+one-request-one-response shape above. Full detail in
+[`docs/api/effects.md`](api/effects.md#streaming).
+
+**Ingest — WebSocket.** `GET /v1/voice/stream` and `GET /v1/face/stream`
+upgrade to a WebSocket. The frame type splits the protocol:
+
+- **binary** frames carry media — raw 16-bit little-endian mono PCM for voice
+  (no WAV header per chunk), JPEG for face — in both directions;
+- **text** frames carry JSON control, so a client retunes the effect
+  mid-stream without interrupting the media.
+
+```json
+{ "type": "format",     "sample_rate": 48000 }   // voice, before the first audio frame
+{ "type": "parameters", "parameters": { "pitch_cents": -800 } }
+```
+
+The server answers with text status frames — `{"type":"ready","session":"…"}`
+once the slot is claimed, `{"type":"error","message":"…"}` for anything else.
+A socket has no status code once it is open, so errors travel as messages; a
+malformed control frame is reported and the connection **stays open**.
+
+**Broadcast — chunked HTTP.** `GET /v1/face/broadcast` serves MJPEG
+(`multipart/x-mixed-replace`, so a bare `<img src>` renders it) and
+`GET /v1/voice/broadcast` serves a streaming WAV. Both carry the phone's *own*
+camera/mic, already transformed, and take the same `?preset=` and per-field
+query overrides as their one-shot counterparts. Both answer `503` when the app
+isn't supplying capture.
+
+**Admission.** One slot per modality — a second client gets
+`429 busy`, and a voice stream never blocks a face stream. A session that
+sends nothing for **30 seconds** is assumed dead and closed; sending anything
+at all resets the clock. Streams are admitted separately from the ordinary
+endpoint limiters, so a minutes-long stream never stalls the one-shot routes.
+
+**Auth.** When a bearer token is set, these four routes *also* accept
+`?token=<token>`, because a browser can set an `Authorization` header on
+neither a WebSocket handshake nor an `<img src>`. The fallback is scoped to
+exactly these paths; every other endpoint stays header-only. A query token is
+the weaker option — it survives in shell history and referrers — though it is
+kept out of the phone's request log.
 
 ### CORS
 

@@ -158,9 +158,203 @@ class SidecarClient:
         )
         return [base64.b64decode(item["b64_json"]) for item in result["data"]]
 
+    def stylize_image(
+        self,
+        image: str | Path,
+        prompt: str | None = None,
+        n: int = 1,
+        style: str | None = None,
+    ) -> list[bytes]:
+        """Restyle a photo of a person. The generative counterpart to
+        `face_transform`, which instead edits the real photograph."""
+        result = self._post_json(
+            "/v1/images/stylize",
+            {
+                "image_base64": base64.b64encode(Path(image).read_bytes()).decode(),
+                "prompt": prompt,
+                "n": n,
+                "style": style,
+            },
+        )
+        return [base64.b64decode(item["b64_json"]) for item in result["data"]]
+
     def image_styles(self) -> list[str]:
         """Image-generation styles available on this device (needs Apple Intelligence)."""
         return self._get("/v1/images/styles")["styles"]
+
+    # ------------------------------------------------------------- face effects
+
+    def face_presets(self) -> dict:
+        """`{"presets", "styles"}` — what the face changer accepts."""
+        return self._get("/v1/face/presets")
+
+    def face_transform(
+        self,
+        image: str | Path,
+        out: str | Path | None = None,
+        preset: str | None = None,
+        parameters: dict | None = None,
+        format: str = "png",
+    ) -> dict:
+        """Reshape/restyle the faces in a photo.
+
+        A photo with no face is a normal outcome, not an error — the result
+        comes back untouched with `faces: 0`.
+        """
+        body: dict[str, Any] = {
+            "image_base64": base64.b64encode(Path(image).read_bytes()).decode()
+        }
+        if preset:
+            body["preset"] = preset
+        if parameters:
+            body["parameters"] = parameters
+        result = self._check(
+            self._client.post("/v1/face/transform", json=body, params={"format": format})
+        )
+        if out:
+            Path(out).write_bytes(base64.b64decode(result["result"]["data_base64"]))
+        return result
+
+    # ------------------------------------------------------------ voice effects
+
+    def voice_presets(self) -> dict:
+        """`{"presets", "distortion_presets", "reverb_presets"}`."""
+        return self._get("/v1/voice/presets")
+
+    def voice_transform(
+        self,
+        audio: str | Path,
+        out: str | Path | None = None,
+        preset: str | None = None,
+        parameters: dict | None = None,
+    ) -> bytes:
+        """Apply the voice changer to a clip; returns the WAV bytes."""
+        body: dict[str, Any] = {
+            "audio_base64": base64.b64encode(Path(audio).read_bytes()).decode()
+        }
+        if preset:
+            body["preset"] = preset
+        if parameters:
+            body["parameters"] = parameters
+        result = self._post_json("/v1/voice/transform", body)
+        wav = base64.b64decode(result["data_base64"])
+        if out:
+            Path(out).write_bytes(wav)
+        return wav
+
+    def voice_analyze(self, audio: str | Path) -> dict:
+        """Acoustic profile of a clip. `voiced_ratio` below 0.1 means the F0
+        estimate is not trustworthy."""
+        return self._post_file("/v1/voice/analyze", audio, "audio/wav")
+
+    def voice_respeak(
+        self,
+        audio: str | Path,
+        out: str | Path | None = None,
+        voice: str | None = None,
+        locale: str | None = None,
+        parameters: dict | None = None,
+    ) -> dict:
+        """Transcribe the clip and speak it back through a system voice.
+
+        Returns the envelope including `text`; the raw `Accept: audio/wav` path
+        would give bytes only, so the transcript is JSON-path-only.
+        """
+        result = self._post_json(
+            "/v1/voice/respeak",
+            {
+                "audio_base64": base64.b64encode(Path(audio).read_bytes()).decode(),
+                "voice": voice,
+                "locale": locale,
+                "parameters": parameters,
+            },
+        )
+        if out:
+            Path(out).write_bytes(base64.b64decode(result["data_base64"]))
+        return result
+
+    # ---------------------------------------------------------------- streaming
+
+    def stream_url(self, path: str, **params: Any) -> str:
+        """Absolute URL for a streaming route, carrying the token as `?token=`.
+
+        The four streaming routes accept the token as a query parameter because
+        a browser can set an `Authorization` header on neither a WebSocket
+        handshake nor an `<img src>`. Use this to hand a URL to ffplay, VLC or
+        a `websockets` client.
+        """
+        request = self._client.build_request("GET", path, params=params or None)
+        url = request.url
+        auth = self._client.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            url = url.copy_add_param("token", auth[7:])
+        return str(url)
+
+    def face_broadcast(self, out: str | Path | None = None, **params: Any) -> Iterator[bytes]:
+        """MJPEG of the phone's own transformed camera.
+
+        Yields raw `multipart/x-mixed-replace` bytes (boundary
+        `sidecarmlframe`). Answers 503 when the app isn't supplying capture.
+        """
+        return self._broadcast("/v1/face/broadcast", out, params)
+
+    def voice_broadcast(self, out: str | Path | None = None, **params: Any) -> Iterator[bytes]:
+        """Streaming WAV of the phone's own transformed microphone."""
+        return self._broadcast("/v1/voice/broadcast", out, params)
+
+    def _broadcast(
+        self, path: str, out: str | Path | None, params: dict
+    ) -> Iterator[bytes]:
+        logger.info(f"GET {path} (stream)")
+        handle = Path(out).open("wb") if out else None
+        try:
+            with self._client.stream("GET", path, params=params, timeout=None) as response:
+                if response.is_error:
+                    response.read()
+                    self._check(response)
+                for chunk in response.iter_bytes():
+                    if handle:
+                        handle.write(chunk)
+                    yield chunk
+        finally:
+            if handle:
+                handle.close()
+
+    def voice_stream(self) -> Any:
+        """Open `GET /v1/voice/stream` — send PCM16 LE mono chunks, get them back.
+
+        Needs the optional `websockets` package (`pip install websockets`).
+        Returns the connection context manager; the caller drives the protocol,
+        starting with the format frame — without it the phone assumes 44100:
+
+            import json
+            async with phone.voice_stream() as ws:
+                await ws.send(json.dumps({"type": "format", "sample_rate": 48000}))
+                await ws.send(pcm16_chunk)          # binary frame
+                out = await ws.recv()
+        """
+        return self._websocket("/v1/voice/stream")
+
+    def face_stream(self) -> Any:
+        """Open `GET /v1/face/stream` — send JPEG frames, get transformed ones back.
+
+        Needs the optional `websockets` package (`pip install websockets`).
+        """
+        return self._websocket("/v1/face/stream")
+
+    def _websocket(self, path: str) -> Any:
+        try:
+            from websockets.asyncio.client import connect
+        except ImportError as error:  # pragma: no cover - optional dependency
+            raise RuntimeError(
+                "The live streaming routes need the optional 'websockets' package: "
+                "pip install websockets"
+            ) from error
+        url = self.stream_url(path).replace("http://", "ws://", 1).replace(
+            "https://", "wss://", 1
+        )
+        logger.info(f"WS {path}")
+        return connect(url)
 
     # ------------------------------------------------------------------ text
 

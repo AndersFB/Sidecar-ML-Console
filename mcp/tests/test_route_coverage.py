@@ -16,7 +16,7 @@ from fastmcp.client import Client
 from sidecar_ml_mcp.gating import ALWAYS_ON, tool_routes
 from sidecar_ml_mcp.server import mcp
 
-# All 30 routes from docs/API.md.
+# All 43 routes from docs/API.md.
 ALL_ROUTES = {
     "GET /",
     "GET /health",
@@ -35,11 +35,22 @@ ALL_ROUTES = {
     "POST /v1/vision/hand-pose",
     "POST /v1/vision/document",
     "POST /v1/images/generations",
+    "POST /v1/images/stylize",
     "GET /v1/images/styles",
     "POST /v1/speech/speak",
     "GET /v1/speech/voices",
     "POST /v1/speech/transcribe",
     "GET /v1/speech/transcribe/locales",
+    "GET /v1/voice/presets",
+    "POST /v1/voice/transform",
+    "POST /v1/voice/analyze",
+    "POST /v1/voice/respeak",
+    "GET /v1/voice/stream",
+    "GET /v1/voice/broadcast",
+    "GET /v1/face/presets",
+    "POST /v1/face/transform",
+    "GET /v1/face/stream",
+    "GET /v1/face/broadcast",
     "GET /v1/translation/languages",
     "POST /v1/translation/translate",
     "POST /v1/nlp/analyze",
@@ -55,14 +66,34 @@ ALL_ROUTES = {
 # agent pick among them at random.
 FOLDED_INTO_CONNECTION_TOOLS = {"GET /", "GET /health", "GET /v1/capabilities"}
 
+# Long-lived streams, deliberately not exposed as tools. A WebSocket or a
+# minutes-long MJPEG body has no meaning inside one request/response tool call,
+# and the phone admits exactly one session per modality — an agent holding one
+# would lock the user out of their own console. Listed here so the coverage
+# assertion stays honest rather than being quietly loosened.
+STREAMING_NOT_EXPOSED = {
+    "GET /v1/voice/stream",
+    "GET /v1/voice/broadcast",
+    "GET /v1/face/stream",
+    "GET /v1/face/broadcast",
+}
+
 
 def test_every_route_has_a_tool():
-    covered = set(tool_routes().values()) | FOLDED_INTO_CONNECTION_TOOLS
+    covered = (
+        set(tool_routes().values()) | FOLDED_INTO_CONNECTION_TOOLS | STREAMING_NOT_EXPOSED
+    )
     assert ALL_ROUTES - covered == set(), "routes with no MCP tool"
 
 
 def test_no_tool_points_at_an_unknown_route():
     assert set(tool_routes().values()) - ALL_ROUTES == set(), "tools pointing at unknown routes"
+
+
+def test_streaming_routes_are_real_routes():
+    """The exclusion list must name routes that exist, or it hides a real gap."""
+    assert STREAMING_NOT_EXPOSED <= ALL_ROUTES
+    assert not (STREAMING_NOT_EXPOSED & set(tool_routes().values()))
 
 
 def test_each_route_is_claimed_by_exactly_one_tool():
