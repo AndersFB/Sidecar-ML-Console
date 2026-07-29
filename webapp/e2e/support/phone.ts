@@ -71,6 +71,8 @@ export const PANEL_CAPABILITY: Record<string, string | null> = {
   Faces: 'vision-detectors',
   Pose: 'vision-detectors',
   'Document Scan': 'vision-detectors',
+  'Face Changer': 'face-fx',
+  'Voice Changer': 'voice-fx',
   'Generate Image': 'image-gen',
   Transcribe: 'speech-transcribe',
   Speak: 'speech-speak',

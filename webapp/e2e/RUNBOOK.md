@@ -197,11 +197,19 @@ that is intentional, gating is per panel.
 | `35-vision-detectors` | Faces, Pose (body + hand), Document Scan |
 | `40-live-camera` | Faces and Pose live loops via a fake camera — capture → POST → overlay → fps |
 | `50-audio` | Speak, Transcribe (**speak → transcribe round trip**), Sound Events, Song ID |
+| `55-effects` | Voice Changer (transform **asserts the bytes changed**, re-speak round trip), Face Changer (preset + transform, and that no swap tab returns) |
 | `60-image-gen` | Generate Image |
-| `70-api-docs` | Base URL substitution, endpoint filter, the 30-route count |
+| `70-api-docs` | Base URL substitution, endpoint filter, the 41-route count |
 | `80-persistence` | Reload restores the selected panel (localStorage) and the image + result (IndexedDB) |
 | `85-singlefile` | The released single-file console over `file://` |
 | `90-auth-token` | Bearer token, and the wrong-token asymmetry |
+
+**Not covered.** The Voice and Face Changers each have a Live tab driven by
+`src/api/liveStream.ts` — a WebSocket carrying PCM or JPEG frames, plus the two
+broadcast routes the phone renders into a bare `<img>`/`<audio>`. `55-effects`
+covers the one-shot modes only. A streaming session is long-lived and the phone
+allows one per modality, so it needs its own harness rather than another spec
+in this file.
 
 ---
 
