@@ -9,6 +9,13 @@ tsconfig.tsbuildinfo
 __pycache__/
 *.pyc
 
+# End-to-end tests: run artifacts, generated fixtures, and human-supplied media
+# (photos/music are never committed — see webapp/e2e/fixtures/human/README.md)
+webapp/e2e/.artifacts/
+webapp/e2e/fixtures/generated/
+webapp/e2e/fixtures/human/*
+!webapp/e2e/fixtures/human/README.md
+
 # Local tooling & OS noise
 .claude/
 .DS_Store

@@ -1,0 +1,22 @@
+{
+  "//": "Editor/typecheck only. Deliberately NOT referenced by ../tsconfig.json, so `tsc -b` (and therefore `npm run build`) never sees these files. `types` is emptied because the root config injects vitest globals, whose `expect` collides with Playwright's.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["."],
+  "exclude": [".artifacts", "fixtures/generated"]
+}
