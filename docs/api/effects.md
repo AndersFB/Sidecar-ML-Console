@@ -11,15 +11,9 @@ live over a stream.
 | Voice Changer | `voice-fx` | Always — the effect chain and analyzer are plain DSP. (`respeak` additionally needs speech models and reports its own `503`.) |
 | Face Changer | `face-fx` | Needs CoreML-backed Vision for face landmarks; reports `503 capability_unavailable` where that can't run, the simulator included |
 
-Two framings worth stating plainly, because both endpoints are easy to
-misread:
-
-- **`/v1/voice/match` is not voice cloning.** It measures pitch register and
-  brightness and derives EQ/pitch settings that move one voice toward another.
-  Apple ships no on-device voice conversion.
-- **`/v1/face/swap` is not a generative face swap.** It warps the *existing
-  pixels* of one face onto another's landmarks and blends them through a mask.
-  It synthesizes no new identity.
+One framing worth stating plainly: both changers **alter** a voice or a face,
+they do not **replace** one with another's. There is no voice cloning and no
+face swapping here — the phone synthesizes no new identity.
 
 ---
 
@@ -125,37 +119,6 @@ trustworthy** — a client should say so rather than present the number.
 
 **Python:** `phone.voice_analyze("clip.wav")`
 
-### `POST /v1/voice/match`
-
-Profiles two clips and derives the settings that move the source toward the
-target's register and brightness. Two clips in one body, since the binary-body
-convention only carries a single payload.
-
-| Body field | Type | Notes |
-|---|---|---|
-| `source_audio_base64` | string, **required** | The voice to change |
-| `target_audio_base64` | string, **required** | The reference voice |
-| `transform` | bool | Also return the source rendered with the derived settings |
-
-```bash
-curl http://PHONE:8080/v1/voice/match -H 'Content-Type: application/json' -d '{
-  "source_audio_base64": "…", "target_audio_base64": "…", "transform": true
-}'
-```
-
-```json
-{ "source": { "median_f0_hz": 118.4, … },
-  "target": { "median_f0_hz": 210.7, … },
-  "parameters": { "pitch_cents": 380, "brightness": 0.22, … },
-  "audio": { "content_type": "audio/wav", "data_base64": "…", "duration_s": 4.1, "sample_rate": 44100 } }
-```
-
-`audio` appears only when `transform` was true. Feed `parameters` straight back
-into [`/v1/voice/transform`](#post-v1voicetransform) to apply the match to
-other clips.
-
-**Python:** `phone.voice_match("me.wav", "reference.wav", transform=True)`
-
 ### `POST /v1/voice/respeak`
 
 Transcribes the clip and speaks it back through a different system voice — a
@@ -202,8 +165,7 @@ curl http://PHONE:8080/v1/face/presets
 {
   "presets": [{ "id": "cartoon", "name": "Cartoon", "parameters": { … } }],
   "styles": ["none", "comic", "crystallize", "pixellate", "posterize",
-             "thermal", "xray", "noir", "bloom"],
-  "directions": ["source_into_target", "target_into_source"]
+             "thermal", "xray", "noir", "bloom"]
 }
 ```
 
@@ -258,51 +220,6 @@ image, so it is not downscaled.
 
 **Python:** `phone.face_transform("portrait.jpg", preset="cartoon")` → `bytes`
 
-### `POST /v1/face/swap`
-
-Aligns the source face to the target's eye line, intersects the mask with the
-destination's face outline, matches mean skin tone, and blends.
-
-| Body field | Type | Notes |
-|---|---|---|
-| `source_image_base64` | string, **required** | |
-| `target_image_base64` | string, **required** | |
-| `parameters` | object | See below |
-
-| Parameter | Range | Notes |
-|---|---|---|
-| `direction` | `source_into_target` (default) · `target_into_source` | Which image donates the face |
-| `blend` | 0…1 | Opacity of the swapped face (default 0.9) |
-| `feather` | 0…1 | Mask edge softness (default 0.5) |
-| `color_match` | 0…1 | Pull toward the destination's skin tone (default 0.8; 0 keeps the original colour) |
-| `scale` | 0.8…1.2 | Size nudge on top of the landmark-derived scale |
-| `offset_x`, `offset_y` | −0.3…0.3 | Position nudge, in interocular distances |
-| `face` | object | Optional face effects applied to the finished composite |
-
-```bash
-curl http://PHONE:8080/v1/face/swap -H 'Content-Type: application/json' -d '{
-  "source_image_base64": "…", "target_image_base64": "…",
-  "parameters": { "direction": "source_into_target", "blend": 0.9 }
-}'
-```
-
-```json
-{ "image": { "width": 1024, "height": 1024 },
-  "result": { "content_type": "image/png", "data_base64": "…", … },
-  "notes": [
-    "Landmark-aligned composite: existing pixels are warped and blended onto the destination face. This is not a generative face swap and synthesizes no new identity.",
-    "Best results come from similar head pose, framing and lighting in both photos."
-  ] }
-```
-
-Both inputs are downscaled to 2048 px on the long edge — two base64 images
-share one 50 MB body, and a landmark-aligned composite gains nothing from more
-pixels. A photo with no detectable face answers `400` naming which one.
-
-Surface `notes` to the user; they state what the technique is and isn't.
-
-**Python:** `phone.face_swap("me.jpg", "target.jpg")` → `bytes`
-
 ---
 
 ## Streaming
@@ -345,12 +262,7 @@ WebSocket. Binary frames are **JPEG**, in and out.
 
 ```json
 { "type": "parameters", "parameters": { "eye_size": 0.6, "style": "comic" } }
-{ "type": "target", "image_base64": "…" }
-{ "type": "swap", "parameters": { "blend": 0.9, "color_match": 0.8 } }
 ```
-
-`target` sets the swap donor once; every frame after it is composited against
-that photo.
 
 Keep exactly one frame outstanding and drop frames the phone doesn't keep up
 with — the same rule as [live video](vision.md#live-video) over the one-shot

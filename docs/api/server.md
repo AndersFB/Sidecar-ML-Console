@@ -79,11 +79,11 @@ The fourteen capability ids, in response order:
 | `vision-analysis` | vision | `/v1/vision/barcodes`, `/v1/vision/classify`, `/v1/vision/feature-print`, `/v1/vision/similarity` |
 | `vision-detectors` | vision | `/v1/vision/faces`, `/v1/vision/body-pose`, `/v1/vision/hand-pose`, `/v1/vision/document` |
 | `vision-subjects` | vision | `/v1/vision/subject-mask`, `/v1/vision/person-segmentation` |
-| `face-fx` | vision | `/v1/face/presets`, `/v1/face/transform`, `/v1/face/swap`, `/v1/face/stream`, `/v1/face/broadcast` |
+| `face-fx` | vision | `/v1/face/presets`, `/v1/face/transform`, `/v1/face/stream`, `/v1/face/broadcast` |
 | `nlp` | text | `/v1/nlp/analyze`, `/v1/nlp/embed`, `/v1/nlp/similarity` |
 | `speech-speak` | speech | `/v1/speech/speak`, `/v1/speech/voices` |
 | `speech-transcribe` | speech | `/v1/speech/transcribe`, `/v1/speech/transcribe/locales` |
-| `voice-fx` | speech | `/v1/voice/presets`, `/v1/voice/transform`, `/v1/voice/analyze`, `/v1/voice/match`, `/v1/voice/respeak`, `/v1/voice/stream`, `/v1/voice/broadcast` |
+| `voice-fx` | speech | `/v1/voice/presets`, `/v1/voice/transform`, `/v1/voice/analyze`, `/v1/voice/respeak`, `/v1/voice/stream`, `/v1/voice/broadcast` |
 | `sound` | audio | `/v1/sound/classify`, `/v1/sound/labels` |
 | `shazam` | audio | `/v1/shazam/match` — the only capability with `requires_network: true` |
 | `translation` | language | `/v1/translation/translate`, `/v1/translation/languages` |

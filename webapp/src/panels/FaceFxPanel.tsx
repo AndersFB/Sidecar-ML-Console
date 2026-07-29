@@ -2,13 +2,9 @@ import { useEffect, useState } from 'react';
 import { api, envelopeToBlob } from '../api/client';
 import {
   DEFAULT_FACE_PARAMETERS,
-  DEFAULT_FACE_SWAP_PARAMETERS,
   FACE_LIMITS,
-  FACE_SWAP_LIMITS,
   type FaceParameters,
   type FacePreset,
-  type FaceSwapParameters,
-  type FaceSwapResponse,
   type FaceTransformResponse,
 } from '../api/types';
 import { BeforeAfter } from '../components/BeforeAfter';
@@ -21,12 +17,11 @@ import { useStoredMediaUrl } from '../utils/useStoredMedia';
 import { usePersistentState } from '../utils/usePersistentState';
 import { useStoredState } from '../utils/useStoredState';
 
-type Mode = 'transform' | 'live' | 'swap';
+type Mode = 'transform' | 'live';
 
 const MODES: { id: Mode; label: string }[] = [
   { id: 'transform', label: 'Transform' },
   { id: 'live', label: 'Live' },
-  { id: 'swap', label: 'Face swap' },
 ];
 
 export function FaceFxPanel() {
@@ -36,13 +31,8 @@ export function FaceFxPanel() {
     'sidecar.facefx.parameters',
     DEFAULT_FACE_PARAMETERS,
   );
-  const [swapParameters, setSwapParameters] = usePersistentState<FaceSwapParameters>(
-    'sidecar.facefx.swapParameters',
-    DEFAULT_FACE_SWAP_PARAMETERS,
-  );
   const [presets, setPresets] = useState<FacePreset[]>([]);
   const [styles, setStyles] = useState<string[]>([]);
-  const [directions, setDirections] = useState<string[]>([]);
   const [presetId, setPresetId] = usePersistentState<string | null>('sidecar.facefx.preset', null);
 
   const [image, setImage] = useStoredState<PickedImage | null>(
@@ -55,19 +45,6 @@ export function FaceFxPanel() {
     null,
   );
   const [resultUrl, setResultUrl] = useStoredMediaUrl('sidecar.facefx.resultImage');
-
-  const [swapSource, setSwapSource] = useStoredState<PickedImage | null>(
-    'sidecar.facefx.swapSource',
-    null,
-    revivePickedImage,
-  );
-  const [swapTarget, setSwapTarget] = useStoredState<PickedImage | null>(
-    'sidecar.facefx.swapTarget',
-    null,
-    revivePickedImage,
-  );
-  const [swap, setSwap] = useStoredState<FaceSwapResponse | null>('sidecar.facefx.swap', null);
-  const [swapUrl, setSwapUrl] = useStoredMediaUrl('sidecar.facefx.swapImage');
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +59,6 @@ export function FaceFxPanel() {
         if (cancelled) return;
         setPresets(response.presets);
         setStyles(response.styles);
-        setDirections(response.directions);
       })
       .catch(() => {
         if (!cancelled) setPresets([]);
@@ -95,13 +71,6 @@ export function FaceFxPanel() {
   const set = <K extends keyof FaceParameters>(key: K, value: FaceParameters[K]) => {
     setParameters((current) => ({ ...current, [key]: value }));
     setPresetId(null);
-  };
-
-  const setSwapValue = <K extends keyof FaceSwapParameters>(
-    key: K,
-    value: FaceSwapParameters[K],
-  ) => {
-    setSwapParameters((current) => ({ ...current, [key]: value }));
   };
 
   const applyPreset = (id: string) => {
@@ -127,26 +96,6 @@ export function FaceFxPanel() {
       const response = await api.faceTransform(config, image.file, parameters);
       setResult(response);
       setResultUrl(envelopeToBlob(response.result));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const runSwap = async () => {
-    if (!swapSource || !swapTarget) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await api.faceSwap(
-        config,
-        swapSource.file,
-        swapTarget.file,
-        swapParameters,
-      );
-      setSwap(response);
-      setSwapUrl(envelopeToBlob(response.result));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -208,12 +157,8 @@ export function FaceFxPanel() {
     <div className="flex flex-col gap-3">
       <ModeTabs modes={MODES} active={mode} onSelect={setMode} />
 
-      {mode !== 'swap' && (
-        <>
-          <PresetChips presets={presets} selected={presetId} onSelect={applyPreset} />
-          {faceSliders}
-        </>
-      )}
+      <PresetChips presets={presets} selected={presetId} onSelect={applyPreset} />
+      {faceSliders}
 
       {mode === 'transform' && (
         <>
@@ -254,76 +199,6 @@ export function FaceFxPanel() {
 
       {mode === 'live' && (
         <LiveFaceSection parameters={parameters} presetId={presetId} onError={setError} />
-      )}
-
-      {mode === 'swap' && (
-        <>
-          <p className="text-sm text-ink-2">
-            A landmark-aligned composite: the existing pixels of one face are
-            warped and blended onto the other. This is <strong>not</strong> a
-            generative face swap and synthesizes no new identity. Best results
-            come from similar head pose, framing and lighting in both photos.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-ink-2">Source photo</p>
-              <ImageDropzone
-                key={`s${inputKey}`}
-                preview={swapSource?.previewUrl ?? null}
-                onPick={(picked) => { setSwapSource(picked); setSwap(null); }}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-ink-2">Target photo</p>
-              <ImageDropzone
-                key={`t${inputKey}`}
-                preview={swapTarget?.previewUrl ?? null}
-                onPick={(picked) => { setSwapTarget(picked); setSwap(null); }}
-              />
-            </div>
-          </div>
-          <ControlGroup title="Swap">
-            <Field label="Direction">
-              <select
-                className={inputClass}
-                value={swapParameters.direction}
-                onChange={(event) => setSwapValue('direction', event.target.value)}
-              >
-                {(directions.length > 0
-                  ? directions
-                  : ['source_into_target', 'target_into_source']
-                ).map((name) => (
-                  <option key={name} value={name}>{name.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
-            </Field>
-            <ParameterSlider label="Blend" value={swapParameters.blend} limits={FACE_SWAP_LIMITS.unit} onChange={(v) => setSwapValue('blend', v)} resetTo={0.9} />
-            <ParameterSlider label="Feather" value={swapParameters.feather} limits={FACE_SWAP_LIMITS.unit} onChange={(v) => setSwapValue('feather', v)} resetTo={0.5} />
-            <ParameterSlider label="Skin-tone match" value={swapParameters.color_match} limits={FACE_SWAP_LIMITS.unit} onChange={(v) => setSwapValue('color_match', v)} resetTo={0.8} />
-            <ParameterSlider label="Scale" value={swapParameters.scale} limits={FACE_SWAP_LIMITS.scale} onChange={(v) => setSwapValue('scale', v)} resetTo={1} format={(v) => `${v.toFixed(3)}×`} />
-            <ParameterSlider label="Offset X" value={swapParameters.offset_x} limits={FACE_SWAP_LIMITS.offset} onChange={(v) => setSwapValue('offset_x', v)} />
-            <ParameterSlider label="Offset Y" value={swapParameters.offset_y} limits={FACE_SWAP_LIMITS.offset} onChange={(v) => setSwapValue('offset_y', v)} />
-          </ControlGroup>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => void runSwap()} disabled={!swapSource || !swapTarget || busy}>
-              Swap faces
-            </Button>
-            {busy && <Spinner label="Compositing on-device…" />}
-          </div>
-          {swap && swapUrl && (
-            <Card title="Result">
-              <img src={swapUrl} alt="Swapped face" className="w-full rounded-lg" />
-              <a href={swapUrl} download="face-swap.png" className="mt-2 inline-block text-xs text-cyan-a">
-                Download PNG
-              </a>
-              <ul className="mt-2 flex flex-col gap-1 text-xs text-ink-3">
-                {swap.notes.map((note, index) => (
-                  <li key={index}>{note}</li>
-                ))}
-              </ul>
-            </Card>
-          )}
-        </>
       )}
 
       {error && <ErrorBanner message={error} />}

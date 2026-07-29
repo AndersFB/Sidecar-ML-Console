@@ -290,13 +290,6 @@ export interface VoiceProfile {
   sample_rate: number;
 }
 
-export interface VoiceMatchResponse {
-  source: VoiceProfile;
-  target: VoiceProfile;
-  parameters: VoiceParameters;
-  audio?: AudioEnvelope;
-}
-
 export interface VoiceRespeakResponse extends AudioEnvelope {
   text: string;
 }
@@ -349,33 +342,6 @@ export const DEFAULT_FACE_PARAMETERS: FaceParameters = {
   mask_expand: 0.08,
 };
 
-export interface FaceSwapParameters {
-  direction: string;
-  blend: number;
-  feather: number;
-  color_match: number;
-  scale: number;
-  offset_x: number;
-  offset_y: number;
-  face?: FaceParameters | null;
-}
-
-export const FACE_SWAP_LIMITS = {
-  unit: { min: 0, max: 1, step: 0.01 },
-  scale: { min: 0.8, max: 1.2, step: 0.005 },
-  offset: { min: -0.3, max: 0.3, step: 0.005 },
-} as const;
-
-export const DEFAULT_FACE_SWAP_PARAMETERS: FaceSwapParameters = {
-  direction: 'source_into_target',
-  blend: 0.9,
-  feather: 0.5,
-  color_match: 0.8,
-  scale: 1,
-  offset_x: 0,
-  offset_y: 0,
-};
-
 export interface FacePreset {
   id: string;
   name: string;
@@ -385,7 +351,6 @@ export interface FacePreset {
 export interface FacePresetsResponse {
   presets: FacePreset[];
   styles: string[];
-  directions: string[];
 }
 
 export interface FaceTransformResponse {
@@ -393,13 +358,6 @@ export interface FaceTransformResponse {
   /** Zero means the image came back untouched rather than the call failing. */
   faces: number;
   result: ImageEnvelope;
-}
-
-export interface FaceSwapResponse {
-  image: ImageSize;
-  result: ImageEnvelope;
-  /** What the caller should know about the technique's limits. */
-  notes: string[];
 }
 
 export interface ApiErrorEnvelope {

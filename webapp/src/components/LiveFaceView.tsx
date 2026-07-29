@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LiveSocket, liveSocketUrl, streamUrl } from '../api/liveStream';
-import type { FaceParameters, FaceSwapParameters } from '../api/types';
+import type { FaceParameters } from '../api/types';
 import { useConnection } from '../state/ConnectionContext';
-import { blobToBase64 } from '../utils/base64';
 import { useCamera } from '../utils/useCamera';
 import { useCloseWhenHidden } from '../utils/useCloseWhenHidden';
 
@@ -26,15 +25,10 @@ const MIN_FRAME_INTERVAL_MS = 66;
  */
 export function LiveFaceView({
   parameters,
-  swapTarget,
-  swapParameters,
   onError,
   onClose,
 }: {
   parameters: FaceParameters;
-  /** Optional donor photo; sent once, then applied to every frame. */
-  swapTarget?: Blob | null;
-  swapParameters?: FaceSwapParameters;
   onError: (message: string) => void;
   onClose: () => void;
 }) {
@@ -100,22 +94,6 @@ export function LiveFaceView({
   useEffect(() => {
     if (live) socketRef.current?.send({ type: 'parameters', parameters });
   }, [parameters, live]);
-
-  useEffect(() => {
-    if (live && swapParameters) socketRef.current?.send({ type: 'swap', parameters: swapParameters });
-  }, [swapParameters, live]);
-
-  // The donor photo is set once per stream and reused for every frame after.
-  useEffect(() => {
-    if (!live || !swapTarget) return;
-    let cancelled = false;
-    void blobToBase64(swapTarget).then((base64) => {
-      if (!cancelled) socketRef.current?.send({ type: 'target', image_base64: base64 });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [swapTarget, live]);
 
   // Capture loop.
   useEffect(() => {

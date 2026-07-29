@@ -65,14 +65,13 @@ CAPABILITIES = [
     {"id": "voice-fx", "name": "Voice Changer", "category": "speech",
      "available": True, "requires_network": False, "summary": "",
      "endpoints": ["GET /v1/voice/presets", "POST /v1/voice/transform",
-                   "POST /v1/voice/analyze", "POST /v1/voice/match",
+                   "POST /v1/voice/analyze",
                    "POST /v1/voice/respeak", "GET /v1/voice/stream",
                    "GET /v1/voice/broadcast"]},
     {"id": "face-fx", "name": "Face Changer", "category": "vision",
      "available": True, "requires_network": False, "summary": "",
      "endpoints": ["GET /v1/face/presets", "POST /v1/face/transform",
-                   "POST /v1/face/swap", "GET /v1/face/stream",
-                   "GET /v1/face/broadcast"]},
+                   "GET /v1/face/stream", "GET /v1/face/broadcast"]},
     # Deliberately unavailable — the device-varies case the server must handle.
     {"id": "image-gen", "name": "Image Generation", "category": "vision",
      "available": False, "requires_network": False, "summary": "",
@@ -305,26 +304,6 @@ async def voice_analyze(request: Request):
     })
 
 
-async def voice_match(request: Request):
-    body = await request.json()
-    for key in ("source_audio_base64", "target_audio_base64"):
-        if not body.get(key):
-            return _error(400, "bad_request", f"'{key}' is not valid base64.")
-    state.received.append({"path": request.url.path, "body": body})
-    profile = {
-        "median_f0_hz": 118.4, "spectral_centroid_hz": 1840.5,
-        "voiced_ratio": 0.62, "duration_s": 4.1, "sample_rate": 44100,
-    }
-    payload = {
-        "source": profile,
-        "target": {**profile, "median_f0_hz": 210.7},
-        "parameters": {"pitch_cents": 380, "brightness": 0.22},
-    }
-    if body.get("transform"):
-        payload["audio"] = _envelope(WAV, "audio/wav", duration_s=4.1, sample_rate=44100)
-    return JSONResponse(payload)
-
-
 async def voice_respeak(request: Request):
     body = await request.json()
     if not body.get("audio_base64"):
@@ -344,7 +323,6 @@ FACE_PRESETS = {
          "parameters": {"eye_size": 0.75, "style": "comic", "style_amount": 0.85}},
     ],
     "styles": ["none", "comic", "crystallize", "pixellate", "noir"],
-    "directions": ["source_into_target", "target_into_source"],
 }
 
 
@@ -365,27 +343,6 @@ async def face_transform(request: Request):
         "image": {"width": 1, "height": 1},
         "faces": faces,
         "result": _envelope(PNG, "image/png", width=1, height=1),
-    })
-
-
-async def face_swap(request: Request):
-    if (blocked := _guard("POST /v1/face/swap")) is not None:
-        return blocked
-    body = await request.json()
-    for key in ("source_image_base64", "target_image_base64"):
-        if not body.get(key):
-            return _error(400, "bad_request", f"'{key}' is not valid base64.")
-    state.received.append({"path": request.url.path, "body": body})
-    return JSONResponse({
-        "image": {"width": 1, "height": 1},
-        "result": _envelope(PNG, "image/png", width=1, height=1),
-        "notes": [
-            "Landmark-aligned composite: existing pixels are warped and blended "
-            "onto the destination face. This is not a generative face swap and "
-            "synthesizes no new identity.",
-            "Best results come from similar head pose, framing and lighting in "
-            "both photos.",
-        ],
     })
 
 
@@ -513,11 +470,9 @@ app = Starlette(routes=[
     Route("/v1/voice/presets", voice_presets),
     Route("/v1/voice/transform", voice_transform, methods=["POST"]),
     Route("/v1/voice/analyze", voice_analyze, methods=["POST"]),
-    Route("/v1/voice/match", voice_match, methods=["POST"]),
     Route("/v1/voice/respeak", voice_respeak, methods=["POST"]),
     Route("/v1/face/presets", face_presets),
     Route("/v1/face/transform", face_transform, methods=["POST"]),
-    Route("/v1/face/swap", face_swap, methods=["POST"]),
     Route("/v1/speech/speak", speak, methods=["POST"]),
     Route("/v1/speech/voices", voices),
     Route("/v1/speech/transcribe", transcribe, methods=["POST"]),

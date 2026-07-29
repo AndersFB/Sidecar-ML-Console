@@ -10,8 +10,6 @@ import type {
   FaceParameters,
   FacePresetsResponse,
   FacesResponse,
-  FaceSwapParameters,
-  FaceSwapResponse,
   FaceTransformResponse,
   HandPoseResponse,
   Health,
@@ -28,7 +26,6 @@ import type {
   TranslateResponse,
   TranslationLanguages,
   Voice,
-  VoiceMatchResponse,
   VoiceParameters,
   VoicePresetsResponse,
   VoiceProfile,
@@ -272,12 +269,6 @@ export const api = {
     }),
   voiceAnalyze: (c: ApiConfig, audio: Blob) =>
     postBinary<VoiceProfile>(c, '/v1/voice/analyze', audio),
-  voiceMatch: async (c: ApiConfig, source: Blob, target: Blob, transform = false) =>
-    postJson<VoiceMatchResponse>(c, '/v1/voice/match', {
-      source_audio_base64: await blobToBase64(source),
-      target_audio_base64: await blobToBase64(target),
-      transform,
-    }),
   voiceRespeak: async (
     c: ApiConfig,
     audio: Blob,
@@ -301,18 +292,6 @@ export const api = {
   ) =>
     postJson<FaceTransformResponse>(c, `/v1/face/transform?format=${format}`, {
       image_base64: await blobToBase64(image),
-      parameters,
-    }),
-  faceSwap: async (
-    c: ApiConfig,
-    source: Blob,
-    target: Blob,
-    parameters: FaceSwapParameters,
-    format: 'png' | 'jpeg' = 'png',
-  ) =>
-    postJson<FaceSwapResponse>(c, `/v1/face/swap?format=${format}`, {
-      source_image_base64: await blobToBase64(source),
-      target_image_base64: await blobToBase64(target),
       parameters,
     }),
 };

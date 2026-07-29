@@ -4,10 +4,8 @@ import {
   DEFAULT_VOICE_PARAMETERS,
   VOICE_LIMITS,
   type Voice,
-  type VoiceMatchResponse,
   type VoiceParameters,
   type VoicePreset,
-  type VoiceProfile,
   type VoiceRespeakResponse,
 } from '../api/types';
 import { AudioInput } from '../components/AudioInput';
@@ -19,40 +17,13 @@ import { usePersistentState } from '../utils/usePersistentState';
 import { useStoredMediaUrl } from '../utils/useStoredMedia';
 import { useStoredState } from '../utils/useStoredState';
 
-type Mode = 'transform' | 'live' | 'match' | 'respeak';
+type Mode = 'transform' | 'live' | 'respeak';
 
 const MODES: { id: Mode; label: string }[] = [
   { id: 'transform', label: 'Transform' },
   { id: 'live', label: 'Live' },
-  { id: 'match', label: 'Match a voice' },
   { id: 'respeak', label: 'Re-speak' },
 ];
-
-function ProfileCard({ title, profile }: { title: string; profile: VoiceProfile }) {
-  const hz = (value: number | null | undefined) => (value == null ? '–' : `${value.toFixed(1)} Hz`);
-  return (
-    <Card title={title}>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-xs text-ink-2">
-        <dt>median F0</dt>
-        <dd className="text-cyan-a">{hz(profile.median_f0_hz)}</dd>
-        <dt>range</dt>
-        <dd>{hz(profile.f0_low_hz)} – {hz(profile.f0_high_hz)}</dd>
-        <dt>centroid</dt>
-        <dd>{hz(profile.spectral_centroid_hz)}</dd>
-        <dt>voiced</dt>
-        <dd>{(profile.voiced_ratio * 100).toFixed(1)}%</dd>
-        <dt>duration</dt>
-        <dd>{profile.duration_s.toFixed(2)}s</dd>
-      </dl>
-      {profile.voiced_ratio < 0.1 && (
-        <p className="mt-2 text-xs text-amber-a">
-          Barely any voiced speech in this clip — the pitch estimate is not
-          trustworthy.
-        </p>
-      )}
-    </Card>
-  );
-}
 
 export function VoiceFxPanel() {
   const { config, connectedConfig, status } = useConnection();
@@ -72,14 +43,6 @@ export function VoiceFxPanel() {
   const [audio, setAudio] = useStoredState<Blob | null>('sidecar.voicefx.audio', null);
   const [resultUrl, setResultUrl] = useStoredMediaUrl('sidecar.voicefx.result');
   const [sourceUrl, setSourceUrl] = useStoredMediaUrl('sidecar.voicefx.source');
-
-  const [matchSource, setMatchSource] = useStoredState<Blob | null>('sidecar.voicefx.matchA', null);
-  const [matchTarget, setMatchTarget] = useStoredState<Blob | null>('sidecar.voicefx.matchB', null);
-  const [match, setMatch] = useStoredState<VoiceMatchResponse | null>(
-    'sidecar.voicefx.match',
-    null,
-  );
-  const [matchUrl, setMatchUrl] = useStoredMediaUrl('sidecar.voicefx.matchAudio');
 
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voice, setVoice] = usePersistentState('sidecar.voicefx.voice', '');
@@ -154,21 +117,6 @@ export function VoiceFxPanel() {
       const envelope = await api.voiceTransform(config, audio, parameters);
       setResultUrl(audioEnvelopeToBlob(envelope));
       setSourceUrl(audio);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const runMatch = async (alsoRender: boolean) => {
-    if (!matchSource || !matchTarget) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await api.voiceMatch(config, matchSource, matchTarget, alsoRender);
-      setMatch(result);
-      setMatchUrl(result.audio ? audioEnvelopeToBlob(result.audio) : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -284,12 +232,8 @@ export function VoiceFxPanel() {
     <div className="flex flex-col gap-3">
       <ModeTabs modes={MODES} active={mode} onSelect={setMode} />
 
-      {mode !== 'match' && (
-        <>
-          <PresetChips presets={presets} selected={presetId} onSelect={applyPreset} />
-          {sliders}
-        </>
-      )}
+      <PresetChips presets={presets} selected={presetId} onSelect={applyPreset} />
+      {sliders}
 
       {mode === 'transform' && (
         <>
@@ -328,75 +272,6 @@ export function VoiceFxPanel() {
 
       {mode === 'live' && (
         <LiveVoiceSection parameters={parameters} presetId={presetId} onError={setError} />
-      )}
-
-      {mode === 'match' && (
-        <>
-          <p className="text-sm text-ink-2">
-            Profiles both clips and derives the settings that move the first
-            voice toward the second's register and brightness. This matches
-            pitch and timbre — it is <strong>not</strong> voice cloning, and no
-            new identity is synthesized.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-ink-2">Your voice (source)</p>
-              <AudioInput key={`a${inputKey}`} onAudio={(blob) => { setMatchSource(blob); setMatch(null); }} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-ink-2">Reference voice (target)</p>
-              <AudioInput key={`b${inputKey}`} onAudio={(blob) => { setMatchTarget(blob); setMatch(null); }} />
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => void runMatch(false)} disabled={!matchSource || !matchTarget || busy}>
-              Analyze
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => void runMatch(true)}
-              disabled={!matchSource || !matchTarget || busy}
-            >
-              Analyze + render
-            </Button>
-            {busy && <Spinner label="Analyzing on-device…" />}
-          </div>
-          {match && (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ProfileCard title="Source" profile={match.source} />
-                <ProfileCard title="Target" profile={match.target} />
-              </div>
-              <Card
-                title="Derived settings"
-                actions={
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setParameters(match.parameters);
-                      setPresetId(null);
-                      setMode('transform');
-                    }}
-                  >
-                    Use these settings
-                  </Button>
-                }
-              >
-                <dl className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-xs text-ink-2 sm:grid-cols-4">
-                  <dt>pitch</dt>
-                  <dd className="text-cyan-a">{match.parameters.pitch_cents.toFixed(0)} cents</dd>
-                  <dt>brightness</dt>
-                  <dd className="text-cyan-a">{match.parameters.brightness.toFixed(2)}</dd>
-                </dl>
-                {matchUrl && (
-                  <div className="mt-3">
-                    <audio src={matchUrl} controls className="w-full" />
-                  </div>
-                )}
-              </Card>
-            </>
-          )}
-        </>
       )}
 
       {mode === 'respeak' && (

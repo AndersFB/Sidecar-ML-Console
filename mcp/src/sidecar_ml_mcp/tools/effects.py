@@ -25,11 +25,9 @@ ROUTES = {
     "list_voice_presets": "GET /v1/voice/presets",
     "transform_voice": "POST /v1/voice/transform",
     "analyze_voice": "POST /v1/voice/analyze",
-    "match_voice": "POST /v1/voice/match",
     "respeak_audio": "POST /v1/voice/respeak",
     "list_face_presets": "GET /v1/face/presets",
     "transform_face": "POST /v1/face/transform",
-    "swap_faces": "POST /v1/face/swap",
 }
 
 
@@ -160,51 +158,6 @@ def register(mcp: FastMCP) -> None:
         return await phone.post_raw("/v1/voice/analyze", data, content_type)
 
     @mcp.tool(tags={"voice-fx"}, output_schema=None)
-    async def match_voice(
-        source_audio: str,
-        target_audio: str,
-        transform: bool = False,
-        save_path: str | None = None,
-    ) -> dict:
-        """Derive the settings that move one voice toward another's register.
-
-        This measures pitch and timbre and returns voice-changer settings — it
-        is NOT voice cloning and synthesizes no new identity. Apple ships no
-        on-device voice conversion. Describe it that way to the user.
-
-        Feed the returned `parameters` into transform_voice to apply the match
-        to other clips.
-
-        Args:
-            source_audio: The voice to change — path, http(s) URL, or base64.
-            target_audio: The reference voice — path, http(s) URL, or base64.
-            transform: Also render the source with the derived settings.
-            save_path: Where to write that rendering, when transform is true.
-        """
-        phone = get_connection()
-        await phone.require(ROUTES["match_voice"])
-        result = await phone.post_json(
-            "/v1/voice/match",
-            {
-                "source_audio_base64": await _b64(source_audio, "audio"),
-                "target_audio_base64": await _b64(target_audio, "audio"),
-                "transform": transform,
-            },
-        )
-        summary = {
-            "source": result.get("source"),
-            "target": result.get("target"),
-            "parameters": result.get("parameters"),
-            "note": (
-                "Matches pitch register and timbre. This is not voice cloning "
-                "and synthesizes no new identity."
-            ),
-        }
-        if result.get("audio"):
-            summary["audio"] = _save_audio(result["audio"], save_path, {})
-        return summary
-
-    @mcp.tool(tags={"voice-fx"}, output_schema=None)
     async def respeak_audio(
         audio: str,
         voice: str | None = None,
@@ -238,7 +191,7 @@ def register(mcp: FastMCP) -> None:
 
     @mcp.tool(tags={"face-fx"}, annotations={"readOnlyHint": True})
     async def list_face_presets() -> dict:
-        """List the face-changer presets, style names and swap directions.
+        """List the face-changer presets and style names.
 
         Pass a `style` from this list to transform_face rather than guessing —
         an unknown name is rejected.
@@ -322,66 +275,6 @@ def register(mcp: FastMCP) -> None:
         }
         if result.get("faces", 0) == 0:
             summary["note"] = "No face was found; the image is unchanged."
-        if save_path:
-            summary["saved_to"] = save_bytes(image_data, save_path)
-        return [Image(data=image_data, format=image_format(image_type)), summary]
-
-    @mcp.tool(tags={"face-fx"}, output_schema=None)
-    async def swap_faces(
-        source_image: str,
-        target_image: str,
-        direction: str = "source_into_target",
-        blend: float | None = None,
-        feather: float | None = None,
-        color_match: float | None = None,
-        save_path: str | None = None,
-    ) -> list:
-        """Composite one face onto another photo by landmark alignment.
-
-        This warps the EXISTING pixels of one face onto the other's landmarks
-        and blends them through a mask. It is NOT a generative face swap and
-        synthesizes no new identity — Apple ships no on-device model for that.
-        Expect a recognisable but visibly composited result, best when both
-        photos share head pose, framing and lighting. The response `notes` say
-        this too; pass them on rather than overstating the result.
-
-        Args:
-            source_image: Path, http(s) URL, or base64-encoded image data.
-            target_image: Path, http(s) URL, or base64-encoded image data.
-            direction: "source_into_target" (default) or "target_into_source" —
-                which photo donates the face.
-            blend: Opacity of the swapped face, 0-1 (default 0.9).
-            feather: Mask edge softness, 0-1 (default 0.5).
-            color_match: Pull toward the destination's skin tone, 0-1 (default 0.8).
-            save_path: Optional path to also write the result to disk.
-        """
-        phone = get_connection()
-        await phone.require(ROUTES["swap_faces"])
-        parameters = {
-            key: value
-            for key, value in {
-                "direction": direction,
-                "blend": blend,
-                "feather": feather,
-                "color_match": color_match,
-            }.items()
-            if value is not None
-        }
-        result = await phone.post_json(
-            "/v1/face/swap",
-            {
-                "source_image_base64": await _b64(source_image, "image"),
-                "target_image_base64": await _b64(target_image, "image"),
-                "parameters": parameters,
-            },
-        )
-        image_data, image_type = decode_envelope(result.get("result", {}))
-        summary = {
-            "image": result.get("image"),
-            "bytes": len(image_data),
-            "content_type": image_type,
-            "notes": result.get("notes", []),
-        }
         if save_path:
             summary["saved_to"] = save_bytes(image_data, save_path)
         return [Image(data=image_data, format=image_format(image_type)), summary]

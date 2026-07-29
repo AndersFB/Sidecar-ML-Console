@@ -64,17 +64,4 @@ describe('FaceFxPanel', () => {
     expect(cartoon).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('Eye size')).toHaveValue('0.75');
   });
-
-  it('renders the swap notes verbatim so the technique is not oversold', async () => {
-    await openPanel();
-    await userEvent.click(screen.getByRole('tab', { name: 'Face swap' }));
-
-    const inputs = screen.getAllByTestId('image-input');
-    const file = new File(['fake-png-bytes'], 'a.png', { type: 'image/png' });
-    await userEvent.upload(inputs[0], file);
-    await userEvent.upload(inputs[1], file);
-    await userEvent.click(screen.getByRole('button', { name: 'Swap faces' }));
-
-    expect(await screen.findByText(/not a generative face swap/)).toBeInTheDocument();
-  });
 });

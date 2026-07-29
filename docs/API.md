@@ -30,9 +30,8 @@ The per-endpoint reference is split by area under [`docs/api/`](api/):
 | [`POST /v1/vision/body-pose`](api/vision.md#post-v1visionbody-pose) | Body skeleton joints |
 | [`POST /v1/vision/hand-pose`](api/vision.md#post-v1visionhand-pose) | Hand joints with chirality |
 | [`POST /v1/vision/document`](api/vision.md#post-v1visiondocument) | Document detection + perspective-corrected scan |
-| [`GET /v1/face/presets`](api/effects.md#get-v1facepresets) | Face presets, style names, swap directions |
+| [`GET /v1/face/presets`](api/effects.md#get-v1facepresets) | Face presets and style names |
 | [`POST /v1/face/transform`](api/effects.md#post-v1facetransform) | Reshape / restyle the faces in a photo |
-| [`POST /v1/face/swap`](api/effects.md#post-v1faceswap) | Landmark-aligned face swap onto a target photo |
 | [`GET /v1/face/stream`](api/effects.md#get-v1facestream) | *WebSocket* — send camera frames, get transformed frames |
 | [`GET /v1/face/broadcast`](api/effects.md#get-v1facebroadcast) | MJPEG of the phone's own transformed camera |
 | [`POST /v1/images/generations`](api/images.md#post-v1imagesgenerations) | Text-to-image (Image Playground) |
@@ -45,7 +44,6 @@ The per-endpoint reference is split by area under [`docs/api/`](api/):
 | [`GET /v1/voice/presets`](api/effects.md#get-v1voicepresets) | Voice presets + distortion/reverb preset names |
 | [`POST /v1/voice/transform`](api/effects.md#post-v1voicetransform) | Voice changer over a clip |
 | [`POST /v1/voice/analyze`](api/effects.md#post-v1voiceanalyze) | Acoustic profile of a voice |
-| [`POST /v1/voice/match`](api/effects.md#post-v1voicematch) | Derive settings matching a reference voice |
 | [`POST /v1/voice/respeak`](api/effects.md#post-v1voicerespeak) | Re-speak a clip through a system voice |
 | [`GET /v1/voice/stream`](api/effects.md#get-v1voicestream) | *WebSocket* — send mic audio, get transformed audio |
 | [`GET /v1/voice/broadcast`](api/effects.md#get-v1voicebroadcast) | Streaming WAV of the phone's own transformed mic |
@@ -178,8 +176,6 @@ upgrade to a WebSocket. The frame type splits the protocol:
 ```json
 { "type": "format",     "sample_rate": 48000 }   // voice, before the first audio frame
 { "type": "parameters", "parameters": { "pitch_cents": -800 } }
-{ "type": "target",     "image_base64": "…" }    // face — the swap donor
-{ "type": "swap",       "parameters": { "blend": 0.9 } }
 ```
 
 The server answers with text status frames — `{"type":"ready","session":"…"}`

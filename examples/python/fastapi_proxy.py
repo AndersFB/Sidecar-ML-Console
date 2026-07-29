@@ -174,21 +174,6 @@ class ImageStylizeRequest(BaseModel):
     style: str | None = None
 
 
-class FaceSwapRequest(BaseModel):
-    source_image_base64: str
-    target_image_base64: str
-    # direction, blend, feather, color_match, scale, offset_x, offset_y, face —
-    # all clamped server-side, so this stays an open dict rather than a second
-    # copy of the range table.
-    parameters: dict | None = None
-
-
-class VoiceMatchRequest(BaseModel):
-    source_audio_base64: str
-    target_audio_base64: str
-    transform: bool | None = None
-
-
 class VoiceRespeakRequest(BaseModel):
     audio_base64: str
     voice: str | None = None  # identifier or BCP-47 language code
@@ -501,7 +486,7 @@ async def nlp_similarity(body: NlpSimilarityRequest) -> Any:
 
 @app.get("/v1/face/presets", tags=["Face effects"])
 async def face_presets() -> Any:
-    """Face presets, style names and swap directions."""
+    """Face presets and style names."""
     return await _get("/v1/face/presets")
 
 
@@ -542,15 +527,6 @@ async def face_transform(
             style_amount=style_amount,
             mask_to_face=mask_to_face,
         ),
-    )
-
-
-@app.post("/v1/face/swap", tags=["Face effects"])
-async def face_swap(body: FaceSwapRequest, format: str | None = None) -> Any:
-    """Landmark-aligned face composite — not a generative swap. Surface the
-    response `notes`, which say what the technique is and isn't."""
-    return await _post_json(
-        "/v1/face/swap", body.model_dump(exclude_none=True), _params(format=format)
     )
 
 
@@ -609,13 +585,6 @@ async def voice_analyze(file: UploadFile = File(...)) -> Any:
     """Acoustic profile of a voice. `voiced_ratio` below 0.1 means the F0
     estimate is not trustworthy."""
     return await _post_upload("/v1/voice/analyze", file)
-
-
-@app.post("/v1/voice/match", tags=["Voice effects"])
-async def voice_match(body: VoiceMatchRequest) -> Any:
-    """Derive the settings matching a reference voice. Matches register and
-    timbre — this is not voice cloning."""
-    return await _post_json("/v1/voice/match", body.model_dump(exclude_none=True))
 
 
 @app.post("/v1/voice/respeak", tags=["Voice effects"])

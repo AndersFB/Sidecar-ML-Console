@@ -125,7 +125,7 @@ capabilities deciding which tools are advertised.
 ```bash
 cd mcp               # its own project root
 uv venv && uv pip install -e ".[dev]"
-.venv/bin/pytest     # 87 tests, fully offline against tests/fake_phone.py
+.venv/bin/pytest     # 84 tests, fully offline against tests/fake_phone.py
 sidecar-ml-mcp                          # stdio
 sidecar-ml-mcp --transport http --port 8765
 ```

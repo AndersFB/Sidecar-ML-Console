@@ -63,22 +63,6 @@ describe('VoiceFxPanel', () => {
     expect(screen.getByLabelText('Gain')).toHaveValue('3');
   });
 
-  it('states plainly that matching is not voice cloning', async () => {
-    await openPanel();
-    await userEvent.click(screen.getByRole('tab', { name: 'Match a voice' }));
-
-    expect(screen.getByText(/voice cloning/i)).toBeInTheDocument();
-
-    const inputs = screen.getAllByTestId('audio-input');
-    await userEvent.upload(inputs[0], clip());
-    await userEvent.upload(inputs[1], clip());
-    await userEvent.click(screen.getByRole('button', { name: 'Analyze' }));
-
-    expect(await screen.findByText('Source')).toBeInTheDocument();
-    expect(screen.getByText('Target')).toBeInTheDocument();
-    expect(screen.getByText('380 cents')).toBeInTheDocument();
-  });
-
   it('re-speaks a clip and shows the transcript with the audio', async () => {
     await openPanel();
     await userEvent.click(screen.getByRole('tab', { name: 'Re-speak' }));

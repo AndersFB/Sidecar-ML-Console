@@ -185,7 +185,7 @@ class SidecarClient:
     # ------------------------------------------------------------- face effects
 
     def face_presets(self) -> dict:
-        """`{"presets", "styles", "directions"}` — what the face changer accepts."""
+        """`{"presets", "styles"}` — what the face changer accepts."""
         return self._get("/v1/face/presets")
 
     def face_transform(
@@ -210,33 +210,6 @@ class SidecarClient:
             body["parameters"] = parameters
         result = self._check(
             self._client.post("/v1/face/transform", json=body, params={"format": format})
-        )
-        if out:
-            Path(out).write_bytes(base64.b64decode(result["result"]["data_base64"]))
-        return result
-
-    def face_swap(
-        self,
-        source: str | Path,
-        target: str | Path,
-        out: str | Path | None = None,
-        parameters: dict | None = None,
-        format: str = "png",
-    ) -> dict:
-        """Landmark-aligned face composite.
-
-        Warps existing pixels onto the destination face — not a generative
-        swap, and it synthesizes no new identity. The response `notes` say so;
-        surface them.
-        """
-        body: dict[str, Any] = {
-            "source_image_base64": base64.b64encode(Path(source).read_bytes()).decode(),
-            "target_image_base64": base64.b64encode(Path(target).read_bytes()).decode(),
-        }
-        if parameters:
-            body["parameters"] = parameters
-        result = self._check(
-            self._client.post("/v1/face/swap", json=body, params={"format": format})
         )
         if out:
             Path(out).write_bytes(base64.b64decode(result["result"]["data_base64"]))
@@ -273,23 +246,6 @@ class SidecarClient:
         """Acoustic profile of a clip. `voiced_ratio` below 0.1 means the F0
         estimate is not trustworthy."""
         return self._post_file("/v1/voice/analyze", audio, "audio/wav")
-
-    def voice_match(
-        self, source: str | Path, target: str | Path, transform: bool = False
-    ) -> dict:
-        """Derive the settings that move `source` toward `target`'s register.
-
-        This matches pitch and timbre — it is not voice cloning, and no new
-        identity is synthesized.
-        """
-        return self._post_json(
-            "/v1/voice/match",
-            {
-                "source_audio_base64": base64.b64encode(Path(source).read_bytes()).decode(),
-                "target_audio_base64": base64.b64encode(Path(target).read_bytes()).decode(),
-                "transform": transform,
-            },
-        )
 
     def voice_respeak(
         self,

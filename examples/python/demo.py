@@ -19,7 +19,6 @@ Data goes to stdout; loguru status lines go to stderr (pipe-friendly).
 
 from __future__ import annotations
 
-import base64
 import json
 import sys
 import time
@@ -283,7 +282,7 @@ def styles() -> None:
 
 @app.command(name="face-presets")
 def face_presets() -> None:
-    """Face-changer presets, style names and swap directions."""
+    """Face-changer presets and style names."""
     with phone() as p:
         dump(p.face_presets())
 
@@ -301,23 +300,6 @@ def face_transform(
         if result["faces"] == 0:
             logger.warning("no face found — the image came back unchanged")
         logger.success(f"saved {out} ({result['faces']} face(s))")
-
-
-@app.command(name="face-swap")
-def face_swap(
-    source: Path = IMAGE,
-    target: Path = IMAGE,
-    out: Path = typer.Option(Path("swap.png")),
-    direction: str = typer.Option(
-        "source_into_target", help="source_into_target | target_into_source"
-    ),
-) -> None:
-    """Landmark-aligned face composite — not a generative swap."""
-    with phone() as p:
-        result = p.face_swap(source, target, out=out, parameters={"direction": direction})
-        logger.success(f"saved {out}")
-        for note in result["notes"]:
-            logger.info(note)
 
 
 @app.command(name="face-broadcast")
@@ -368,21 +350,6 @@ def voice_analyze(audio: Path = AUDIO) -> None:
         dump(result)
         if result["voiced_ratio"] < 0.1:
             logger.warning("barely any voiced speech — the pitch estimate is unreliable")
-
-
-@app.command(name="voice-match")
-def voice_match(
-    source: Path = AUDIO,
-    target: Path = AUDIO,
-    out: Path | None = typer.Option(None, help="Also render the source with the settings"),
-) -> None:
-    """Derive the settings matching a reference voice. Not voice cloning."""
-    with phone() as p:
-        result = p.voice_match(source, target, transform=out is not None)
-        dump({k: result[k] for k in ("source", "target", "parameters")})
-        if out and result.get("audio"):
-            out.write_bytes(base64.b64decode(result["audio"]["data_base64"]))
-            logger.success(f"saved {out}")
 
 
 @app.command(name="respeak")

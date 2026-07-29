@@ -6,13 +6,12 @@ import {
   type Capability,
   type FacePresetsResponse,
   type FacesResponse,
-  type FaceSwapResponse,
   type FaceTransformResponse,
   type HandPoseResponse,
   type Health,
   type OcrResponse,
-  type VoiceMatchResponse,
   type VoicePresetsResponse,
+  type VoiceProfile,
 } from '../../api/types';
 
 export const BASE = 'http://phone.test:8080';
@@ -164,7 +163,6 @@ export const facePresetsFixture: FacePresetsResponse = {
     },
   ],
   styles: ['none', 'comic', 'pixellate'],
-  directions: ['source_into_target', 'target_into_source'],
 };
 
 export const faceTransformFixture: FaceTransformResponse = {
@@ -173,35 +171,14 @@ export const faceTransformFixture: FaceTransformResponse = {
   result: { content_type: 'image/png', data_base64: PNG_BASE64, width: 1, height: 1 },
 };
 
-export const faceSwapFixture: FaceSwapResponse = {
-  image: { width: 1, height: 1 },
-  result: { content_type: 'image/png', data_base64: PNG_BASE64, width: 1, height: 1 },
-  notes: [
-    'Landmark-aligned composite: existing pixels are warped and blended onto the destination face. This is not a generative face swap and synthesizes no new identity.',
-    'Best results come from similar head pose, framing and lighting in both photos.',
-  ],
-};
-
-export const voiceMatchFixture: VoiceMatchResponse = {
-  source: {
-    median_f0_hz: 118.4,
-    f0_low_hz: 96.2,
-    f0_high_hz: 151,
-    spectral_centroid_hz: 1840.5,
-    voiced_ratio: 0.62,
-    duration_s: 4.1,
-    sample_rate: 44100,
-  },
-  target: {
-    median_f0_hz: 210.7,
-    f0_low_hz: 180.1,
-    f0_high_hz: 260.4,
-    spectral_centroid_hz: 2400.2,
-    voiced_ratio: 0.71,
-    duration_s: 3.8,
-    sample_rate: 44100,
-  },
-  parameters: { ...DEFAULT_VOICE_PARAMETERS, pitch_cents: 380, brightness: 0.22 },
+export const voiceProfileFixture: VoiceProfile = {
+  median_f0_hz: 118.4,
+  f0_low_hz: 96.2,
+  f0_high_hz: 151,
+  spectral_centroid_hz: 1840.5,
+  voiced_ratio: 0.62,
+  duration_s: 4.1,
+  sample_rate: 44100,
 };
 
 export const handlers = [
@@ -222,8 +199,7 @@ export const handlers = [
       sample_rate: 44100,
     }),
   ),
-  http.post(`${BASE}/v1/voice/analyze`, () => HttpResponse.json(voiceMatchFixture.source)),
-  http.post(`${BASE}/v1/voice/match`, () => HttpResponse.json(voiceMatchFixture)),
+  http.post(`${BASE}/v1/voice/analyze`, () => HttpResponse.json(voiceProfileFixture)),
   http.post(`${BASE}/v1/voice/respeak`, () =>
     HttpResponse.json({
       content_type: 'audio/wav',
@@ -235,7 +211,6 @@ export const handlers = [
   ),
   http.get(`${BASE}/v1/face/presets`, () => HttpResponse.json(facePresetsFixture)),
   http.post(`${BASE}/v1/face/transform`, () => HttpResponse.json(faceTransformFixture)),
-  http.post(`${BASE}/v1/face/swap`, () => HttpResponse.json(faceSwapFixture)),
   http.post(`${BASE}/v1/chat/completions`, () =>
     HttpResponse.json({
       id: 'chatcmpl-test',

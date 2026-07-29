@@ -226,14 +226,14 @@ export const API_REFERENCE: EndpointGroup[] = [
   },
   {
     title: 'Face effects',
-    note: 'Landmark-anchored reshaping, skin/colour adjustment, stylize filters and face swapping. Image in: raw body or JSON {"image_base64": "…"}. Needs CoreML-backed Vision, so this reports unavailable on the simulator.',
+    note: 'Landmark-anchored reshaping, skin/colour adjustment and stylize filters. Image in: raw body or JSON {"image_base64": "…"}. Needs CoreML-backed Vision, so this reports unavailable on the simulator.',
     endpoints: [
       {
         method: 'GET',
         path: '/v1/face/presets',
-        summary: 'Preset table, style names and swap directions — the same data the app’s picker reads.',
+        summary: 'Preset table and style names — the same data the app’s picker reads.',
         response:
-          '{ "presets": [{ "id": "cartoon", "name": "Cartoon", "parameters": { … } }],\n  "styles": ["none", "comic", "crystallize", "pixellate", "posterize", "thermal", "xray", "noir", "bloom"],\n  "directions": ["source_into_target", "target_into_source"] }',
+          '{ "presets": [{ "id": "cartoon", "name": "Cartoon", "parameters": { … } }],\n  "styles": ["none", "comic", "crystallize", "pixellate", "posterize", "thermal", "xray", "noir", "bloom"] }',
         curl: 'curl {{BASE}}/v1/face/presets',
         python: 'phone.face_presets()',
       },
@@ -258,34 +258,12 @@ export const API_REFERENCE: EndpointGroup[] = [
         python: 'phone.face_transform("portrait.jpg", preset="cartoon")',
       },
       {
-        method: 'POST',
-        path: '/v1/face/swap',
-        summary:
-          'Landmark-aligned composite of one face onto another. Warps existing pixels — not a generative swap, and it synthesizes no new identity.',
-        params: [
-          { name: 'source_image_base64', note: 'required' },
-          { name: 'target_image_base64', note: 'required' },
-          { name: 'parameters.direction', note: 'source_into_target (default) | target_into_source' },
-          { name: 'parameters.blend / feather / color_match', note: '0…1' },
-          { name: 'parameters.scale', note: '0.8…1.2' },
-          { name: 'parameters.offset_x / offset_y', note: '−0.3…0.3, in interocular distances' },
-          { name: 'format', note: 'png (default) | jpeg' },
-        ],
-        response:
-          '{ "image": { "width": 1024, "height": 1024 },\n  "result": { "content_type": "image/png", "data_base64": "…", "width": 1024, "height": 1024 },\n  "notes": ["Landmark-aligned composite: …", "Best results come from similar head pose, …"] }',
-        curl:
-          'curl {{BASE}}/v1/face/swap -H \'Content-Type: application/json\' -d \'{\n  "source_image_base64": "…", "target_image_base64": "…"\n}\'',
-        python: 'phone.face_swap("me.jpg", "target.jpg")',
-      },
-      {
         method: 'GET',
         path: '/v1/face/stream',
         summary:
           'WebSocket. Send JPEG frames as binary; transformed JPEGs come back. Text frames carry JSON control, so the effect retunes mid-stream without interrupting the video.',
         params: [
           { name: '{"type":"parameters","parameters":{…}}', note: 'retune the effect' },
-          { name: '{"type":"target","image_base64":"…"}', note: 'set the swap donor photo' },
-          { name: '{"type":"swap","parameters":{…}}', note: 'swap blend/feather/offset' },
           { name: 'token', note: 'query fallback — a browser cannot set headers on a WebSocket handshake' },
         ],
         response:
@@ -407,7 +385,7 @@ export const API_REFERENCE: EndpointGroup[] = [
   },
   {
     title: 'Voice effects',
-    note: 'Pitch/timbre/character effects, acoustic matching against a reference clip, and re-speaking through a system voice. Plain DSP, so this capability is available on every device. Same audio containers as Speech.',
+    note: 'Pitch/timbre/character effects, acoustic analysis and re-speaking through a system voice. Plain DSP, so this capability is available on every device. Same audio containers as Speech.',
     endpoints: [
       {
         method: 'GET',
@@ -445,22 +423,6 @@ export const API_REFERENCE: EndpointGroup[] = [
         curl:
           "curl {{BASE}}/v1/voice/analyze -H 'Content-Type: audio/wav' --data-binary @clip.wav",
         python: 'phone.voice_analyze("clip.wav")',
-      },
-      {
-        method: 'POST',
-        path: '/v1/voice/match',
-        summary:
-          'Profile two clips and derive the settings that move the source toward the target’s register and brightness. Matches pitch and timbre — this is not voice cloning.',
-        params: [
-          { name: 'source_audio_base64', note: 'required' },
-          { name: 'target_audio_base64', note: 'required' },
-          { name: 'transform', note: 'true also returns the source rendered with the derived settings' },
-        ],
-        response:
-          '{ "source": { … }, "target": { … },\n  "parameters": { "pitch_cents": 380, "brightness": 0.22, … },\n  "audio": { "content_type": "audio/wav", … }  // only when transform=true }',
-        curl:
-          'curl {{BASE}}/v1/voice/match -H \'Content-Type: application/json\' -d \'{\n  "source_audio_base64": "…", "target_audio_base64": "…", "transform": true\n}\'',
-        python: 'phone.voice_match("me.wav", "reference.wav", transform=True)',
       },
       {
         method: 'POST',
