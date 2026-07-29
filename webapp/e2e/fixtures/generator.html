@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sidecar ML e2e fixture generator</title>
+    <style>
+      /* Chromium is the image toolchain here: it renders text, shapes and
+         CSS-3D perspective, and encodes PNG/JPEG. That keeps the repo free of
+         both binary fixtures and a native image dependency. */
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #888; font-family: Helvetica, Arial, sans-serif; }
+      .shot { display: inline-block; }
+
+      #ocr {
+        width: 900px; padding: 60px; background: #fff; color: #000;
+        font-size: 64px; font-weight: 700; line-height: 1.35; letter-spacing: 1px;
+      }
+      #ocr .sub { font-size: 40px; font-weight: 400; }
+
+      #shapes-a, #shapes-b { width: 600px; height: 600px; position: relative; }
+      #shapes-a { background: #10203a; }
+      #shapes-b { background: #10203a; }
+      .circle {
+        position: absolute; left: 150px; top: 150px; width: 300px; height: 300px;
+        border-radius: 50%; background: #e2483d;
+      }
+      /* B is A with a small deliberate difference, so distance(A,A) < distance(A,B). */
+      #shapes-b .circle { background: #e2483d; left: 170px; top: 130px; }
+      #shapes-b .extra {
+        position: absolute; left: 60px; top: 430px; width: 120px; height: 120px; background: #f5c542;
+      }
+
+      #different { width: 600px; height: 600px; background: #f7f3e8; position: relative; }
+      #different .band { position: absolute; left: 0; width: 100%; height: 120px; }
+
+      /* A photographed-looking page: real perspective, done by the compositor. */
+      #document {
+        width: 900px; height: 700px; background: #2b2b2f;
+        display: flex; align-items: center; justify-content: center;
+        perspective: 900px;
+      }
+      #document .page {
+        width: 520px; height: 620px; background: #fdfdfa; padding: 48px;
+        transform: rotateY(19deg) rotateX(7deg) rotateZ(-3deg);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
+      }
+      #document .line { height: 14px; background: #33333a; margin-bottom: 18px; }
+      #document h1 { font-size: 34px; margin-bottom: 28px; color: #111; }
+
+      #subject { width: 700px; height: 700px; background: #eef2f6; position: relative; }
+      #subject .mug {
+        position: absolute; left: 210px; top: 190px; width: 280px; height: 320px;
+        background: linear-gradient(160deg, #d94f3d 0%, #8e2a1e 100%);
+        border-radius: 24px 24px 60px 60px;
+      }
+      #subject .handle {
+        position: absolute; left: 470px; top: 260px; width: 130px; height: 150px;
+        border: 34px solid #b03a2b; border-left: none; border-radius: 0 80px 80px 0;
+      }
+      #subject .shadow {
+        position: absolute; left: 190px; top: 495px; width: 340px; height: 46px;
+        background: rgba(0, 0, 0, 0.22); border-radius: 50%; filter: blur(6px);
+      }
+
+      #barcode { background: #fff; padding: 36px; display: inline-block; }
+      #barcode .label {
+        font-family: monospace; font-size: 26px; text-align: center;
+        margin-top: 14px; letter-spacing: 3px; color: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- OCR: high-contrast text with a token the spec asserts round-trips. -->
+    <div class="shot" id="ocr">
+      SIDECAR ML<br />
+      <span class="sub">E2E SMOKE TEST</span><br />
+      INVOICE 12345
+    </div>
+
+    <!-- Similarity: A vs a near-duplicate of A, plus an obviously different image. -->
+    <div class="shot" id="shapes-a"><div class="circle"></div></div>
+    <div class="shot" id="shapes-b"><div class="circle"></div><div class="extra"></div></div>
+    <div class="shot" id="different">
+      <div class="band" style="top: 0; background: #2f6f4f"></div>
+      <div class="band" style="top: 160px; background: #d8b34a"></div>
+      <div class="band" style="top: 320px; background: #7d4a9c"></div>
+      <div class="band" style="top: 480px; background: #35506e"></div>
+    </div>
+
+    <!-- Document Scan: a page at an angle on a dark surface. -->
+    <div class="shot" id="document">
+      <div class="page">
+        <h1>Quarterly Report</h1>
+        <div class="line" style="width: 100%"></div>
+        <div class="line" style="width: 92%"></div>
+        <div class="line" style="width: 96%"></div>
+        <div class="line" style="width: 78%"></div>
+        <div class="line" style="width: 88%"></div>
+        <div class="line" style="width: 94%"></div>
+        <div class="line" style="width: 62%"></div>
+        <div class="line" style="width: 90%"></div>
+        <div class="line" style="width: 84%"></div>
+      </div>
+    </div>
+
+    <!-- Subject Mask / Classify: one clear foreground object on a plain ground. -->
+    <div class="shot" id="subject">
+      <div class="shadow"></div>
+      <div class="handle"></div>
+      <div class="mug"></div>
+    </div>
+
+    <!-- Barcode markup is injected by build-fixtures.mjs. -->
+    <div class="shot" id="barcode"></div>
+
+    <canvas id="webcam-canvas" width="1280" height="720"></canvas>
+  </body>
+</html>

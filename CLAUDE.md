@@ -35,6 +35,10 @@ npm run dev          # http://localhost:5173
 npm test             # Vitest (watch);  npm run test:run for CI
 npm run build        # tsc -b + vite build + single-file dist/sidecar-ml-console.html
 npm run release      # build, then publish the single file as a GitHub release asset
+
+SIDECAR_URL=http://<phone-ip>:8080 npm run e2e   # Playwright, against a real phone
+npm run e2e:preflight                            # reachability + capabilities only
+npm run e2e:report                               # pass/skip/fail table
 ```
 
 - **Serve over `http://localhost`.** An `https://` origin would block requests
@@ -67,6 +71,12 @@ npm run release      # build, then publish the single file as a GitHub release a
   change lands on `main`, run `npm run release` to replace the asset.
 - The phone's CORS policy is `*`, which accepts the `null` origin a
   `file://`-opened console sends.
+- **End-to-end tests** live in `webapp/e2e/` and drive a real browser against a
+  real phone; `webapp/e2e/RUNBOOK.md` is the operator's guide. Vitest must keep
+  ignoring them — `vite.config.ts` sets `test.exclude` for `e2e/**`, because
+  Vitest's default `**/*.spec.ts` glob would otherwise collect Playwright specs
+  into jsdom. Fixtures are generated at run time (Chromium screenshots +
+  the phone's own TTS); no media is committed.
 
 ## API docs stay in 6-way sync
 

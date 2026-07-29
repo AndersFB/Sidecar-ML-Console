@@ -125,5 +125,8 @@ cross the USB link, so enter the address by hand rather than relying on
   token in the app's Settings if you don't trust the network; the console and
   all examples accept a token. Everything runs on-device; only Shazam catalog
   matching calls out to Apple.
-- **Tests**: the webapp has a Vitest suite (`cd webapp && npm test`). The
-  server's own test suites live with the iOS app.
+- **Tests**: the webapp has a Vitest suite (`cd webapp && npm test`) plus an
+  end-to-end suite that drives a real browser against a real phone
+  (`cd webapp && SIDECAR_URL=http://<phone-ip>:8080 npm run e2e` — see
+  [`webapp/e2e/RUNBOOK.md`](webapp/e2e/RUNBOOK.md)). The server's own test
+  suites live with the iOS app.
