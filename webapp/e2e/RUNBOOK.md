@@ -181,7 +181,7 @@ behaviour:
 
 ## 8. Coverage
 
-All 18 panels, each gated on what `GET /v1/capabilities` reported. Three
+All 20 panels, each gated on what `GET /v1/capabilities` reported. Three
 capability ids back more than one panel (`vision-subjects`, `vision-analysis`,
 `vision-detectors`), so one unavailable capability produces several skip rows —
 that is intentional, gating is per panel.

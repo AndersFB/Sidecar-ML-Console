@@ -16,10 +16,10 @@ test.describe('API Reference', () => {
     await expect(panel).toContainText(`${phone.baseUrl}/health`);
 
     // Independent, browser-side check of the same invariant the Vitest tripwire
-    // guards: apiReference.ts must document all 30 server routes.
+    // guards: apiReference.ts must document all 41 server routes.
     await expect(panel.getByLabel('Filter endpoints')).toHaveAttribute(
       'placeholder',
-      /^Filter 30 endpoints/,
+      /^Filter 41 endpoints/,
     );
   });
 
